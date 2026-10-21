@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Flappy Tesla - Cold-Gas Thruster Flight Test</title>
+  <!-- Supabase JS Client (Pinned v2 release) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.48.1/dist/umd/supabase.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -30,10 +32,17 @@
       align-items: center;
       justify-content: center;
     }
+    #game-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.85);
+    }
     canvas {
       display: block;
       touch-action: none;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
       background-color: #0b091a;
       cursor: pointer;
     }
@@ -49,17 +58,744 @@
       background-size: 100% 4px;
       opacity: 0.35;
       mix-blend-mode: overlay;
+      z-index: 5;
+    }
+
+    /* -------------------------------------------------------------
+       UI PANELS & LEADERBOARD STYLING
+       Clean Starbase dark theme with cyber cyan (#00d2d3) accents
+    ------------------------------------------------------------- */
+    .ui-panel {
+      position: absolute;
+      pointer-events: auto;
+      z-index: 20;
+    }
+
+    /* Top Title Screen Bar */
+    #title-ui-bar {
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: auto;
+    }
+    .pilot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(13, 16, 24, 0.85);
+      border: 1px solid rgba(0, 210, 211, 0.4);
+      padding: 6px 14px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .pilot-label {
+      color: #747d8c;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      font-family: monospace;
+    }
+    .pilot-name {
+      color: #00d2d3;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      font-family: monospace;
+    }
+    .btn-link {
+      background: none;
+      border: none;
+      color: #a4b0be;
+      text-decoration: underline;
+      font-size: 11px;
+      font-family: monospace;
+      cursor: pointer;
+      padding: 0 4px;
+      transition: color 0.2s;
+    }
+    .btn-link:hover {
+      color: #ffffff;
+    }
+
+    .btn-hud {
+      background: rgba(13, 16, 24, 0.85);
+      border: 1px solid #00d2d3;
+      color: #00d2d3;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 12px rgba(0, 210, 211, 0.2);
+      transition: all 0.2s ease;
+      backdrop-filter: blur(4px);
+    }
+    .btn-hud:hover {
+      background: #00d2d3;
+      color: #0d0f18;
+      box-shadow: 0 0 20px rgba(0, 210, 211, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* Modals Overlay */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(7, 8, 14, 0.88);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, #131724 0%, #0d0f17 100%);
+      border: 1.5px solid #00d2d3;
+      border-radius: 12px;
+      box-shadow: 0 0 40px rgba(0, 210, 211, 0.3), 0 20px 50px rgba(0, 0, 0, 0.9);
+      padding: 28px 32px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      color: #ffffff;
+      position: relative;
+      animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes modalPop {
+      0% { opacity: 0; transform: scale(0.92); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-tag {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #00d2d3;
+      font-family: monospace;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .modal-title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .modal-desc {
+      font-size: 12px;
+      color: #a4b0be;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* Input styling */
+    .input-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .callsign-input {
+      width: 100%;
+      background: #080a10;
+      border: 1.5px solid #2e384d;
+      border-radius: 8px;
+      color: #00d2d3;
+      font-family: monospace;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 12px 14px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      outline: none;
+      transition: all 0.2s ease;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .callsign-input:focus {
+      border-color: #00d2d3;
+      box-shadow: 0 0 15px rgba(0, 210, 211, 0.45);
+      background: #0a0d17;
+    }
+    .error-msg {
+      color: #ff4757;
+      font-size: 11px;
+      font-family: monospace;
+      margin-top: 6px;
+      text-align: center;
+      display: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00d2d3 0%, #0984e3 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 4px 18px rgba(0, 210, 211, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 25px rgba(0, 210, 211, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* Leaderboard Modal Card */
+    .lb-modal-card {
+      max-width: 480px;
+      padding: 24px 28px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .btn-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #a4b0be;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn-close:hover {
+      background: #ff4757;
+      color: #ffffff;
+      border-color: #ff4757;
+    }
+
+    /* Leaderboard Table / Rows */
+    .lb-content {
+      min-height: 200px;
+      max-height: 280px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #2e384d transparent;
+    }
+    .lb-content::-webkit-scrollbar {
+      width: 4px;
+    }
+    .lb-content::-webkit-scrollbar-thumb {
+      background: #2e384d;
+      border-radius: 4px;
+    }
+    .lb-status {
+      padding: 30px 10px;
+      text-align: center;
+      font-family: monospace;
+      font-size: 13px;
+      color: #a4b0be;
+      letter-spacing: 1px;
+    }
+    .lb-loading {
+      color: #00d2d3;
+      animation: pulseText 1.2s infinite ease-in-out;
+    }
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    .lb-offline {
+      color: #e74c3c;
+      font-weight: 700;
+    }
+    .lb-offline-sub {
+      color: #747d8c;
+      font-size: 11px;
+      font-family: monospace;
+      margin-top: 4px;
+    }
+
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .lb-row-current {
+      background: rgba(0, 210, 211, 0.15) !important;
+      border-color: #00d2d3 !important;
+      box-shadow: 0 0 10px rgba(0, 210, 211, 0.25);
+    }
+    .lb-rank {
+      font-weight: 800;
+      width: 42px;
+      text-align: left;
+      color: #747d8c;
+    }
+    .lb-rank-1 .lb-rank { color: #ffd32a; }
+    .lb-rank-2 .lb-rank { color: #ced6e0; }
+    .lb-rank-3 .lb-rank { color: #e17055; }
+
+    .lb-name {
+      flex: 1;
+      text-align: left;
+      font-weight: 700;
+      color: #f1f2f6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0 8px;
+    }
+    .lb-row-current .lb-name {
+      color: #00d2d3;
+    }
+    .lb-you-badge {
+      display: inline-block;
+      background: #00d2d3;
+      color: #0a0d14;
+      font-size: 9px;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+      letter-spacing: 0.5px;
+    }
+    .lb-score {
+      font-weight: 900;
+      color: #ffffff;
+      text-align: right;
+      min-width: 48px;
+    }
+    .lb-divider {
+      height: 1px;
+      background: dashed rgba(0, 210, 211, 0.3);
+      border-top: 1px dashed rgba(0, 210, 211, 0.35);
+      margin: 8px 0;
+    }
+    .lb-row-own {
+      margin-top: 4px;
+    }
+
+    /* Game Over Integrated Leaderboard Panel */
+    #gameover-leaderboard-panel {
+      right: 35px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 420px;
+      display: none;
+    }
+    #gameover-leaderboard-panel.active {
+      display: block;
+    }
+    .lb-panel-card {
+      background: rgba(14, 16, 25, 0.94);
+      border: 1.5px solid rgba(0, 210, 211, 0.5);
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 210, 211, 0.2);
+      backdrop-filter: blur(6px);
+    }
+    .lb-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .lb-panel-title {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: #00d2d3;
+      font-family: monospace;
+    }
+    .lb-live-tag {
+      font-size: 10px;
+      font-weight: 800;
+      color: #2ed573;
+      background: rgba(46, 213, 115, 0.15);
+      border: 1px solid rgba(46, 213, 115, 0.4);
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-family: monospace;
     }
   </style>
 </head>
 <body>
   <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-    <div class="scanlines"></div>
+    <div id="game-wrapper">
+      <canvas id="gameCanvas"></canvas>
+      <div class="scanlines"></div>
+
+      <!-- Title Screen HTML UI Bar -->
+      <div id="title-ui-bar" class="ui-panel">
+        <div class="pilot-badge">
+          <span class="pilot-label">PILOT:</span>
+          <span id="pilot-name-display" class="pilot-name">STARMAN</span>
+          <button id="change-name-btn" class="btn-link" type="button">Change name</button>
+        </div>
+        <button id="open-leaderboard-btn" class="btn-hud" type="button">
+          <span>🏆</span> LEADERBOARD
+        </button>
+      </div>
+
+      <!-- Name Entry Modal (First load or change name) -->
+      <div id="name-modal" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-tag">STARBASE FLIGHT TELEMETRY</div>
+          <h2 class="modal-title">PILOT IDENTIFICATION</h2>
+          <p class="modal-desc">Enter your callsign for the global flight test leaderboard.</p>
+
+          <div class="input-group">
+            <input id="player-name-input" class="callsign-input" type="text" maxlength="12" placeholder="CALLSIGN" autocomplete="off" spellcheck="false">
+            <div id="name-error" class="error-msg">Callsign required (1–12 characters)</div>
+          </div>
+
+          <button id="name-submit-btn" class="btn-primary" type="button">PLAY</button>
+        </div>
+      </div>
+
+      <!-- Global Leaderboard Modal (from Title screen) -->
+      <div id="leaderboard-modal" class="modal-overlay">
+        <div class="modal-card lb-modal-card">
+          <div class="modal-header">
+            <div>
+              <div class="modal-tag">STARBASE GLOBAL TELEMETRY</div>
+              <h2 class="modal-title">GLOBAL TOP 10 PILOTS</h2>
+            </div>
+            <button id="close-leaderboard-btn" class="btn-close" type="button" title="Close [ESC]">✕</button>
+          </div>
+          <div id="leaderboard-modal-content" class="lb-content">
+            <!-- Dynamically populated via textContent safe rendering -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over Integrated Leaderboard Panel -->
+      <div id="gameover-leaderboard-panel" class="ui-panel">
+        <div class="lb-panel-card">
+          <div class="lb-panel-header">
+            <span class="lb-panel-title">🏆 GLOBAL LEADERBOARD</span>
+            <span id="lb-refresh-indicator" class="lb-live-tag">LIVE</span>
+          </div>
+          <div id="gameover-leaderboard-content" class="lb-content">
+            <!-- Dynamically populated via textContent safe rendering -->
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <script>
   'use strict';
+
+  // ============================================================================
+  // SUPABASE CONFIGURATION
+  // Paste your Supabase project URL and public anon key below:
+  // ============================================================================
+  const SUPABASE_URL = 'https://pvhisjumqnhnfzrpzafy.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2aGlzanVtcW5obmZ6cnB6YWZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTc1ODMsImV4cCI6MjEwODE3MzU4M30.W3Kc9w_JicjZgdFgGLbce_hGwxV2dUMhFoXd1VIM0x0';
+
+  // ============================================================================
+  // PLAYER IDENTITY & LEADERBOARD MANAGER
+  // ============================================================================
+  function getOrGeneratePlayerId() {
+    let id = localStorage.getItem('flappy_tesla_player_id');
+    if (!id) {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        id = crypto.randomUUID();
+      } else {
+        id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      }
+      localStorage.setItem('flappy_tesla_player_id', id);
+    }
+    return id;
+  }
+
+  function getPlayerName() {
+    return (localStorage.getItem('flappy_tesla_player_name') || '').trim();
+  }
+
+  function setPlayerName(name) {
+    const trimmed = (name || '').trim().slice(0, 12);
+    if (trimmed) {
+      localStorage.setItem('flappy_tesla_player_name', trimmed);
+    }
+    return trimmed;
+  }
+
+  let _supabaseClient = null;
+  function getSupabaseClient() {
+    if (_supabaseClient) return _supabaseClient;
+    if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') {
+      return null;
+    }
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL.startsWith('http')) {
+      return null;
+    }
+    try {
+      _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (err) {
+      console.warn('Failed to initialize Supabase client:', err);
+      _supabaseClient = null;
+    }
+    return _supabaseClient;
+  }
+
+  // Submit player score via Supabase RPC
+  async function submitScoreToSupabase(score) {
+    if (score <= 0) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+
+    const p_id = getOrGeneratePlayerId();
+    const p_name = getPlayerName() || 'PILOT';
+    const p_score = Math.floor(score);
+
+    try {
+      const { error } = await client.rpc('submit_score', {
+        p_id: p_id,
+        p_name: p_name,
+        p_score: p_score
+      });
+      if (error) {
+        console.warn('Supabase submit_score notice:', error.message);
+      }
+    } catch (err) {
+      console.warn('Offline / network error submitting score:', err);
+    }
+  }
+
+  // Fetch top 10 global leaderboard scores
+  async function fetchLeaderboardData() {
+    const client = getSupabaseClient();
+    if (!client) {
+      return { status: 'offline', data: [] };
+    }
+
+    try {
+      let { data, error } = await client
+        .from('scores')
+        .select('player_id, name, score')
+        .order('score', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        // Fallback to name, score in case player_id column is restricted
+        const fallback = await client
+          .from('scores')
+          .select('name, score')
+          .order('score', { ascending: false })
+          .limit(10);
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+      }
+
+      const myId = getOrGeneratePlayerId();
+      const myName = getPlayerName();
+      let playerEntry = null;
+
+      if (data && Array.isArray(data)) {
+        playerEntry = data.find(d => (d.player_id && d.player_id === myId) || (d.name && d.name === myName));
+      }
+
+      // If current player is not in top 10, fetch or retrieve their own best
+      if (!playerEntry) {
+        if (myId) {
+          try {
+            const { data: ownData } = await client
+              .from('scores')
+              .select('player_id, name, score')
+              .eq('player_id', myId)
+              .maybeSingle();
+            if (ownData && ownData.score > 0) {
+              playerEntry = ownData;
+            }
+          } catch (e) {}
+        }
+        if (!playerEntry) {
+          const localBest = parseInt(localStorage.getItem('flappy_tesla_highscore') || '0', 10);
+          if (localBest > 0) {
+            playerEntry = { name: myName || 'YOU', score: localBest };
+          }
+        }
+      }
+
+      return {
+        status: 'ok',
+        data: data || [],
+        playerEntry: playerEntry
+      };
+    } catch (err) {
+      console.warn('Leaderboard fetch notice:', err);
+      return { status: 'offline', data: [] };
+    }
+  }
+
+  // Render leaderboard rows safely using textContent to prevent XSS
+  function renderLeaderboardTable(containerEl, result, currentPlayerId) {
+    if (!containerEl) return;
+    containerEl.textContent = ''; // Clear container safely
+
+    if (result.status === 'loading') {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'lb-status lb-loading';
+      loadingDiv.textContent = 'CONNECTING TO STARBASE COMM...';
+      containerEl.appendChild(loadingDiv);
+      return;
+    }
+
+    if (result.status === 'offline') {
+      const offlineDiv = document.createElement('div');
+      offlineDiv.className = 'lb-status lb-offline';
+      offlineDiv.textContent = 'LEADERBOARD OFFLINE';
+      const subDiv = document.createElement('div');
+      subDiv.className = 'lb-offline-sub';
+      subDiv.textContent = 'Telemetry stored locally';
+      containerEl.appendChild(offlineDiv);
+      containerEl.appendChild(subDiv);
+      return;
+    }
+
+    const entries = result.data || [];
+    if (entries.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'lb-status';
+      emptyDiv.textContent = 'NO FLIGHT RECORDS YET — BE THE FIRST!';
+      containerEl.appendChild(emptyDiv);
+      return;
+    }
+
+    const listEl = document.createElement('div');
+    listEl.className = 'lb-list';
+
+    let foundCurrentInList = false;
+    const myName = getPlayerName();
+
+    entries.forEach((entry, index) => {
+      const rank = index + 1;
+      const isCurrentPlayer = (entry.player_id && entry.player_id === currentPlayerId) ||
+                              (entry.name && entry.name === myName);
+      if (isCurrentPlayer) foundCurrentInList = true;
+
+      const rowEl = document.createElement('div');
+      rowEl.className = 'lb-row' + (isCurrentPlayer ? ' lb-row-current' : '') + (rank <= 3 ? ` lb-rank-${rank}` : '');
+
+      const rankSpan = document.createElement('span');
+      rankSpan.className = 'lb-rank';
+      rankSpan.textContent = rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'lb-name';
+      nameSpan.textContent = entry.name || 'ANONYMOUS'; // Safely escaped via textContent
+
+      if (isCurrentPlayer) {
+        const youBadge = document.createElement('span');
+        youBadge.className = 'lb-you-badge';
+        youBadge.textContent = 'YOU';
+        nameSpan.appendChild(youBadge);
+      }
+
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'lb-score';
+      scoreSpan.textContent = (entry.score !== undefined ? entry.score : 0).toString();
+
+      rowEl.appendChild(rankSpan);
+      rowEl.appendChild(nameSpan);
+      rowEl.appendChild(scoreSpan);
+      listEl.appendChild(rowEl);
+    });
+
+    containerEl.appendChild(listEl);
+
+    // If player is not in top 10, render their personal best below the list
+    if (!foundCurrentInList && result.playerEntry && result.playerEntry.score > 0) {
+      const dividerEl = document.createElement('div');
+      dividerEl.className = 'lb-divider';
+      containerEl.appendChild(dividerEl);
+
+      const ownRowEl = document.createElement('div');
+      ownRowEl.className = 'lb-row lb-row-current lb-row-own';
+
+      const rankSpan = document.createElement('span');
+      rankSpan.className = 'lb-rank';
+      rankSpan.textContent = 'YOU';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'lb-name';
+      nameSpan.textContent = result.playerEntry.name || myName || 'YOU';
+
+      const youBadge = document.createElement('span');
+      youBadge.className = 'lb-you-badge';
+      youBadge.textContent = 'BEST';
+      nameSpan.appendChild(youBadge);
+
+      const scoreSpan = document.createElement('span');
+      scoreSpan.className = 'lb-score';
+      scoreSpan.textContent = result.playerEntry.score.toString();
+
+      ownRowEl.appendChild(rankSpan);
+      ownRowEl.appendChild(nameSpan);
+      ownRowEl.appendChild(scoreSpan);
+      containerEl.appendChild(ownRowEl);
+    }
+  }
+
+  // Load leaderboard into any container element with loading state
+  async function loadLeaderboardView(containerEl) {
+    if (!containerEl) return;
+    renderLeaderboardTable(containerEl, { status: 'loading' });
+    const result = await fetchLeaderboardData();
+    const myId = getOrGeneratePlayerId();
+    renderLeaderboardTable(containerEl, result, myId);
+  }
+
+  // Refresh active leaderboards
+  function refreshLeaderboards() {
+    const modalContent = document.getElementById('leaderboard-modal-content');
+    const goContent = document.getElementById('gameover-leaderboard-content');
+    if (document.getElementById('leaderboard-modal')?.classList.contains('active')) {
+      loadLeaderboardView(modalContent);
+    }
+    if (document.getElementById('gameover-leaderboard-panel')?.classList.contains('active')) {
+      loadLeaderboardView(goContent);
+    }
+  }
 
   // ============================================================================
   // 1. TUNING CONSTANTS
@@ -131,6 +867,19 @@
     }
 
     onKeyDown(e) {
+      // Ignore key events when user is typing in an input/textarea (preserves SPACE in text field)
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      // If modal overlay is active, ignore game controls but allow Escape to close
+      if (document.querySelector('.modal-overlay.active')) {
+        if (e.code === 'Escape') {
+          document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        }
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         if (!this.isThrusting) {
@@ -144,6 +893,14 @@
     }
 
     onKeyUp(e) {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (document.querySelector('.modal-overlay.active')) {
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         this.isThrusting = false;
@@ -151,6 +908,15 @@
     }
 
     onPointerDown(e) {
+      if (document.querySelector('.modal-overlay.active')) {
+        return;
+      }
+      // If clicking inside HUD buttons or panels, do not trigger canvas thrust
+      const target = e.target;
+      if (target && target.closest && (target.closest('.ui-panel') || target.closest('.modal-card'))) {
+        return;
+      }
+
       e.preventDefault();
       const canvas = document.getElementById('gameCanvas');
       const rect = canvas.getBoundingClientRect();
@@ -160,7 +926,10 @@
       const clickY = (e.clientY - rect.top) * scaleY;
 
       // Clickable HUD mute toggle button in top right
-      if (clickX > CONSTANTS.VIRTUAL_WIDTH - 150 && clickY < 45) {
+      const isTitle = (window.game && window.game.state === 'TITLE');
+      const muteMinY = isTitle ? 48 : 0;
+      const muteMaxY = isTitle ? 82 : 45;
+      if (clickX > CONSTANTS.VIRTUAL_WIDTH - 150 && clickY >= muteMinY && clickY <= muteMaxY) {
         this.muteToggled = true;
         return;
       }
@@ -1618,6 +2387,13 @@
         displayW = winH * aspect;
       }
 
+      // Sync game wrapper style size for crisp responsive HTML UI overlays
+      const gameWrapper = document.getElementById('game-wrapper');
+      if (gameWrapper) {
+        gameWrapper.style.width = `${Math.floor(displayW)}px`;
+        gameWrapper.style.height = `${Math.floor(displayH)}px`;
+      }
+
       // Canvas element style size
       this.canvas.style.width = `${Math.floor(displayW)}px`;
       this.canvas.style.height = `${Math.floor(displayH)}px`;
@@ -1630,6 +2406,9 @@
     }
 
     startGame() {
+      // Do not launch game if any modal dialog is currently open
+      if (document.querySelector('.modal-overlay.active')) return;
+
       this.audio.resume();
       this.state = 'PLAYING';
       this.score = 0;
@@ -1640,6 +2419,12 @@
       this.roadster.reset();
       this.obstacles.reset();
       this.particles.reset();
+
+      // UI state transitions
+      const titleBar = document.getElementById('title-ui-bar');
+      if (titleBar) titleBar.style.display = 'none';
+      const goPanel = document.getElementById('gameover-leaderboard-panel');
+      if (goPanel) goPanel.classList.remove('active');
     }
 
     triggerGameOver() {
@@ -1658,6 +2443,23 @@
         this.highScore = this.score;
         this.isNewHighScore = true;
         this.saveHighScore(this.highScore);
+      }
+
+      // Submit score to Supabase via RPC only if score > 0
+      if (this.score > 0) {
+        submitScoreToSupabase(this.score).then(() => {
+          refreshLeaderboards();
+        });
+      }
+
+      // Display Game Over Leaderboard Panel on right side of screen
+      const goPanel = document.getElementById('gameover-leaderboard-panel');
+      if (goPanel) {
+        goPanel.classList.add('active');
+        const goContent = document.getElementById('gameover-leaderboard-content');
+        if (goContent) {
+          loadLeaderboardView(goContent);
+        }
       }
     }
 
@@ -1680,13 +2482,20 @@
 
       // State machine logic
       if (this.state === 'TITLE') {
+        const titleBar = document.getElementById('title-ui-bar');
+        if (titleBar && titleBar.style.display !== 'flex') titleBar.style.display = 'flex';
+        const goPanel = document.getElementById('gameover-leaderboard-panel');
+        if (goPanel && goPanel.classList.contains('active')) goPanel.classList.remove('active');
+
         this.background.update(dt, false, CONSTANTS.BASE_SCROLL_SPEED);
         this.roadster.update(dt, false, false, this.particles, false, CONSTANTS.BASE_SCROLL_SPEED);
         this.particles.update(dt, CONSTANTS.BASE_SCROLL_SPEED);
 
-        // Start game on space or click
-        if (this.input.anyKeyJustPressed || this.input.thrustJustPressed) {
-          this.startGame();
+        // Start game on space or click only when NO modal overlay is active
+        if (!document.querySelector('.modal-overlay.active')) {
+          if (this.input.anyKeyJustPressed || this.input.thrustJustPressed) {
+            this.startGame();
+          }
         }
       } else if (this.state === 'PLAYING') {
         // Continuous thruster audio control
@@ -1726,9 +2535,11 @@
         this.background.update(dt, false, CONSTANTS.BASE_SCROLL_SPEED);
         this.particles.update(dt, CONSTANTS.BASE_SCROLL_SPEED);
 
-        // Restart on space / click after brief lock delay (0.4s to prevent accidental skip)
-        if (this.gameOverTimer > 0.45 && (this.input.anyKeyJustPressed || this.input.thrustJustPressed)) {
-          this.startGame();
+        // Restart on space / click after brief lock delay (0.45s) only when NO modal overlay is active
+        if (!document.querySelector('.modal-overlay.active')) {
+          if (this.gameOverTimer > 0.45 && (this.input.anyKeyJustPressed || this.input.thrustJustPressed)) {
+            this.startGame();
+          }
         }
       }
 
@@ -1814,7 +2625,11 @@
       ctx.font = '600 12px monospace';
       ctx.textAlign = 'right';
       ctx.fillStyle = this.audio.isMuted ? '#ff5252' : '#81ecec';
-      ctx.fillText(this.audio.isMuted ? '[M] AUDIO: MUTED' : '[M] AUDIO: ON', W - 18, 26);
+      if (this.state === 'TITLE') {
+        ctx.fillText(this.audio.isMuted ? '[M] AUDIO: MUTED' : '[M] AUDIO: ON', W - 18, 64);
+      } else {
+        ctx.fillText(this.audio.isMuted ? '[M] AUDIO: MUTED' : '[M] AUDIO: ON', W - 18, 26);
+      }
       ctx.restore();
 
       if (this.state === 'TITLE') {
@@ -1931,17 +2746,18 @@
 
         ctx.restore();
       } else if (this.state === 'GAMEOVER') {
-        // Game Over Panel
+        // Game Over Panel (positioned on left side to accommodate the right-side global leaderboard)
         ctx.save();
         ctx.textAlign = 'center';
 
         const panelW = 340;
-        const panelH = 226;
-        const panelX = W / 2 - panelW / 2;
-        const panelY = H / 2 - panelH / 2 - 15;
+        const panelH = 246;
+        const panelX = 85;
+        const panelY = H / 2 - panelH / 2;
+        const centerX = panelX + panelW / 2;
 
         // Panel background
-        ctx.fillStyle = 'rgba(16, 17, 24, 0.92)';
+        ctx.fillStyle = 'rgba(16, 17, 24, 0.94)';
         ctx.strokeStyle = '#e74c3c';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1953,37 +2769,37 @@
         ctx.fillStyle = '#e74c3c';
         ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.letterSpacing = '1px';
-        ctx.fillText('FLIGHT TERMINATED', W / 2, panelY + 36);
+        ctx.fillText('FLIGHT TERMINATED', centerX, panelY + 38);
 
         // Score row
         ctx.fillStyle = '#a4b0be';
         ctx.font = '600 13px monospace';
-        ctx.fillText('FINAL SCORE', W / 2, panelY + 68);
+        ctx.fillText('FINAL SCORE', centerX, panelY + 72);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 38px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(this.score, W / 2, panelY + 106);
+        ctx.font = '900 40px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(this.score, centerX, panelY + 114);
 
         // Top speed reached in km/h
         ctx.fillStyle = '#00d2d3';
         ctx.font = '700 12px monospace';
-        ctx.fillText(`TOP SPEED: ${this.getScrollSpeed()} KM/H [LVL ${this.getSpeedLevel()}]`, W / 2, panelY + 130);
+        ctx.fillText(`TOP SPEED: ${this.getScrollSpeed()} KM/H [LVL ${this.getSpeedLevel()}]`, centerX, panelY + 140);
 
         // Best score & New High Score badge
         ctx.font = '700 13px monospace';
         if (this.isNewHighScore) {
           ctx.fillStyle = '#2ed573';
-          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, W / 2, panelY + 152);
+          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, centerX, panelY + 164);
         } else {
           ctx.fillStyle = '#ffd32a';
-          ctx.fillText(`BEST RECORD: ${this.highScore}`, W / 2, panelY + 152);
+          ctx.fillText(`BEST RECORD: ${this.highScore}`, centerX, panelY + 164);
         }
 
         // Restart prompt
         const promptPulse = Math.sin(this.totalTime * 5.0) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(255, 255, 255, ${promptPulse})`;
         ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', W / 2, panelY + 196);
+        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', centerX, panelY + 212);
 
         ctx.restore();
       }
@@ -2004,9 +2820,120 @@
   }
 
   // ============================================================================
-  // 9. BOOTSTRAP
+  // 9. BOOTSTRAP & DOM UI INITIALIZATION
   // ============================================================================
+  function initUI() {
+    const nameModal = document.getElementById('name-modal');
+    const nameInput = document.getElementById('player-name-input');
+    const nameError = document.getElementById('name-error');
+    const nameSubmitBtn = document.getElementById('name-submit-btn');
+    const pilotDisplay = document.getElementById('pilot-name-display');
+    const changeNameBtn = document.getElementById('change-name-btn');
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    const openLeaderboardBtn = document.getElementById('open-leaderboard-btn');
+    const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+    const modalContent = document.getElementById('leaderboard-modal-content');
+
+    // Ensure UUID player_id exists in localStorage on first load
+    getOrGeneratePlayerId();
+
+    const currentName = getPlayerName();
+    if (!currentName) {
+      // First visit: show name modal before title screen
+      if (nameModal) {
+        nameModal.classList.add('active');
+        setTimeout(() => { if (nameInput) nameInput.focus(); }, 80);
+      }
+    } else {
+      if (pilotDisplay) pilotDisplay.textContent = currentName;
+    }
+
+    function submitName() {
+      if (!nameInput) return;
+      const val = (nameInput.value || '').trim().slice(0, 12);
+      if (!val) {
+        if (nameError) {
+          nameError.textContent = 'Callsign required (1–12 characters)';
+          nameError.style.display = 'block';
+        }
+        nameInput.focus();
+        return;
+      }
+      if (nameError) nameError.style.display = 'none';
+      setPlayerName(val);
+      if (pilotDisplay) pilotDisplay.textContent = val;
+      if (nameModal) nameModal.classList.remove('active');
+    }
+
+    // Name input listeners (prevent space from triggering game thrust)
+    if (nameInput) {
+      nameInput.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitName();
+        }
+      });
+      nameInput.addEventListener('keyup', (e) => e.stopPropagation());
+      nameInput.addEventListener('keypress', (e) => e.stopPropagation());
+    }
+
+    if (nameSubmitBtn) {
+      nameSubmitBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        submitName();
+      });
+    }
+
+    // Change Name button on title screen
+    if (changeNameBtn) {
+      changeNameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (nameInput) {
+          nameInput.value = getPlayerName();
+          if (nameError) nameError.style.display = 'none';
+        }
+        if (nameModal) {
+          nameModal.classList.add('active');
+          setTimeout(() => {
+            if (nameInput) {
+              nameInput.focus();
+              nameInput.select();
+            }
+          }, 80);
+        }
+      });
+    }
+
+    // Leaderboard button on title screen
+    if (openLeaderboardBtn) {
+      openLeaderboardBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (leaderboardModal) {
+          leaderboardModal.classList.add('active');
+          loadLeaderboardView(modalContent);
+        }
+      });
+    }
+
+    if (closeLeaderboardBtn) {
+      closeLeaderboardBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (leaderboardModal) leaderboardModal.classList.remove('active');
+      });
+    }
+
+    if (leaderboardModal) {
+      leaderboardModal.addEventListener('click', (e) => {
+        if (e.target === leaderboardModal) {
+          leaderboardModal.classList.remove('active');
+        }
+      });
+    }
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
+    initUI();
     window.game = new Game();
   });
   </script>
