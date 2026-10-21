@@ -73,10 +73,14 @@
     MAX_CLIMB_SPEED: -420,    // Terminal upward climb velocity (smooth clamp)
 
     // World & obstacle geometry
-    SCROLL_SPEED: 210,        // Horizontal world scroll speed (pixels / sec)
+    BASE_SCROLL_SPEED: 210,       // Starting horizontal world scroll speed (pixels / sec)
+    SCROLL_SPEED: 210,            // Reference base scroll speed
+    SPEED_INCREASE_INTERVAL: 5,   // Increase speed every N points passed
+    SPEED_STEP: 32,               // Pixels / sec added per 5 points
+    MAX_SCROLL_SPEED: 430,        // Speed cap to keep gameplay skill-based and fair
     PIPE_GAP: 165,            // Vertical clearance gap between upper & lower Starbase towers
     PIPE_WIDTH: 74,           // Width of the Starbase launch tower pillars
-    PIPE_SPAWN_INTERVAL: 1.90,// Seconds between new tower pair spawns
+    PIPE_SPAWN_INTERVAL: 1.90,// Seconds between new tower pair spawns at base speed
     PIPE_MIN_GAP_Y: 110,      // Minimum height of the gap center from ceiling
     PIPE_MAX_GAP_Y: 410,      // Maximum height of the gap center from ground
     GROUND_HEIGHT: 50,        // Height of the Starbase tarmac & desert ground
@@ -348,6 +352,33 @@
       osc.stop(now + 0.17);
     }
 
+    // Special celebratory power chime when speed increases every 5 points
+    playSpeedUpPing() {
+      if (!this.ctx || this.isMuted) return;
+      this.resume();
+      const now = this.ctx.currentTime;
+
+      // Ascending celebratory power chord (C5 -> E5 -> G5 -> C6)
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      freqs.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.055;
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.24, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(t);
+        osc.stop(t + 0.16);
+      });
+    }
+
     // Crash sound: violent noise burst + low-frequency impact thud
     playCrash() {
       if (!this.ctx || this.isMuted) return;
@@ -530,7 +561,7 @@
     // --------------------------------------------------------------------------
     // EMITTER: Ground dust & vapor ripple when car is near desert floor
     // --------------------------------------------------------------------------
-    emitGroundDust(x, groundY, intensity) {
+    emitGroundDust(x, groundY, intensity, scrollSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
       const count = Math.ceil(3 * intensity);
       for (let i = 0; i < count; i++) {
         const dir = Math.random() > 0.45 ? 1 : -1;
@@ -539,7 +570,7 @@
           type: 'ground_dust',
           x: x + (Math.random() - 0.5) * 18,
           y: groundY - Math.random() * 3,
-          vx: dir * (Math.random() * 160 + 90) - CONSTANTS.SCROLL_SPEED * 0.3,
+          vx: dir * (Math.random() * 160 + 90) - scrollSpeed * 0.3,
           vy: -(Math.random() * 30 + 10),
           size: size,
           currentSize: size,
@@ -557,12 +588,12 @@
     // --------------------------------------------------------------------------
     // EMITTER: Aerodynamic vapor trail off spoiler wingtip
     // --------------------------------------------------------------------------
-    emitVaporTrail(x, y) {
+    emitVaporTrail(x, y, scrollSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
       this.particles.push({
         type: 'vapor_trail',
         x: x,
         y: y + (Math.random() - 0.5) * 2,
-        vx: -CONSTANTS.SCROLL_SPEED * 0.85,
+        vx: -scrollSpeed * 0.85,
         vy: (Math.random() - 0.5) * 12,
         size: 3,
         currentSize: 3,
@@ -630,7 +661,7 @@
       }
     }
 
-    update(dt) {
+    update(dt, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
       // Screen flash decay
       if (this.screenFlash > 0) {
         this.screenFlash = Math.max(0, this.screenFlash - dt * 4.5);
@@ -677,9 +708,10 @@
         sw.currentAlpha = sw.alpha * (1 - prog);
       }
 
-      // Update speed lines
+      // Update speed lines (streaking faster as game speed increases)
+      const speedRatio = currentSpeed / CONSTANTS.BASE_SCROLL_SPEED;
       for (const line of this.speedLines) {
-        line.x -= line.speed * dt;
+        line.x -= line.speed * speedRatio * dt;
         if (line.x + line.length < 0) {
           line.x = CONSTANTS.VIRTUAL_WIDTH + Math.random() * 80;
           line.y = Math.random() * (CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT - 30) + 15;
@@ -832,7 +864,7 @@
     // 3. Vertical velocity is smoothly integrated and clamped.
     // 4. Thruster output ramps up in ~35ms and tapers down over ~150ms.
     // --------------------------------------------------------------------------
-    update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying) {
+    update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
       if (!this.alive) return;
 
       if (!isPlaying) {
@@ -869,8 +901,8 @@
       // Position update
       this.y += this.vy * dt;
 
-      // Wheel spin while airborne
-      this.wheelRotation += dt * 14;
+      // Wheel spin while airborne (rotates faster as scroll speed increases)
+      this.wheelRotation += dt * (currentSpeed / 15);
 
       // Pitch tilting: nose pitches up slightly during climb/thrust, down when falling
       let targetAngle = 0;
@@ -907,17 +939,17 @@
         particleSystem.emitPuffBurst(rearX, rearY, rearAngle);
       }
 
-      // Emit continuous cold-gas plume based on current thrust output
+      // Emit continuous cold-gas plume based on current thrust output and scroll speed
       if (this.thrustOutput > 0.05) {
-        particleSystem.emitColdGasPlume(underX, underY, underAngle, -CONSTANTS.SCROLL_SPEED * 0.4, this.vy * 0.3, this.thrustOutput);
-        particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -CONSTANTS.SCROLL_SPEED * 0.5, this.vy * 0.2, this.thrustOutput);
+        particleSystem.emitColdGasPlume(underX, underY, underAngle, -currentSpeed * 0.4, this.vy * 0.3, this.thrustOutput);
+        particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -currentSpeed * 0.5, this.vy * 0.2, this.thrustOutput);
       }
 
       // Aerodynamic vapor trail streaming off rear ducktail spoiler
       const spoilerX = this.x + (-31 * cosA - (-7) * sinA);
       const spoilerY = this.y + (-31 * sinA + (-7) * cosA);
       if (Math.random() < 0.65) {
-        particleSystem.emitVaporTrail(spoilerX, spoilerY);
+        particleSystem.emitVaporTrail(spoilerX, spoilerY, currentSpeed);
       }
 
       // Ground dust / vapor ripple effect when skimming low over the desert tarmac
@@ -925,7 +957,7 @@
       const altitude = groundY - (this.y + 10);
       if (altitude < 85 && this.thrustOutput > 0.15) {
         const dustIntensity = (1.0 - (altitude / 85)) * this.thrustOutput;
-        particleSystem.emitGroundDust(this.x, groundY, dustIntensity);
+        particleSystem.emitGroundDust(this.x, groundY, dustIntensity, currentSpeed);
       }
     }
 
@@ -1133,19 +1165,21 @@
       this.spawnTimer = 0.5; // Spawn first tower quickly after game start
     }
 
-    update(dt, isPlaying, scoreCallback) {
+    update(dt, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED, scoreCallback) {
       if (!isPlaying) return;
 
       this.strobeTimer += dt * 3.5;
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
         this.spawnTowerPair();
-        this.spawnTimer = CONSTANTS.PIPE_SPAWN_INTERVAL;
+        // Dynamically adjust spawn timer so spatial distance between towers remains steady as speed increases
+        const spawnInterval = (CONSTANTS.PIPE_SPAWN_INTERVAL * CONSTANTS.BASE_SCROLL_SPEED) / currentSpeed;
+        this.spawnTimer = spawnInterval;
       }
 
       for (let i = this.towers.length - 1; i >= 0; i--) {
         const tower = this.towers[i];
-        tower.x -= CONSTANTS.SCROLL_SPEED * dt;
+        tower.x -= currentSpeed * dt;
 
         // Score trigger: when the car passes the tower center
         if (!tower.passed && tower.x + CONSTANTS.PIPE_WIDTH / 2 < 220) {
@@ -1333,10 +1367,10 @@
       }
     }
 
-    update(dt, isPlaying) {
-      const speed = isPlaying ? CONSTANTS.SCROLL_SPEED : CONSTANTS.SCROLL_SPEED * 0.35;
+    update(dt, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
+      const speed = isPlaying ? currentSpeed : currentSpeed * 0.35;
 
-      // Parallax scroll rates
+      // Parallax scroll rates (scale smoothly with current world speed)
       this.mesaOffset = (this.mesaOffset + speed * 0.08 * dt) % CONSTANTS.VIRTUAL_WIDTH;
       this.starbaseOffset = (this.starbaseOffset + speed * 0.22 * dt) % CONSTANTS.VIRTUAL_WIDTH;
       this.groundOffset = (this.groundOffset + speed * dt) % 60;
@@ -1530,6 +1564,8 @@
       this.highScore = this.loadHighScore();
       this.isNewHighScore = false;
       this.gameOverTimer = 0;
+      this.speedBannerTimer = 0;
+      this.speedBannerText = '';
 
       // Timing
       this.lastTime = performance.now();
@@ -1541,6 +1577,19 @@
 
       // Start delta-time game loop
       requestAnimationFrame((t) => this.loop(t));
+    }
+
+    // Dynamic scroll speed calculation: increases every 5 points passed
+    getScrollSpeed() {
+      const level = Math.floor(this.score / CONSTANTS.SPEED_INCREASE_INTERVAL);
+      return Math.min(
+        CONSTANTS.MAX_SCROLL_SPEED,
+        CONSTANTS.BASE_SCROLL_SPEED + level * CONSTANTS.SPEED_STEP
+      );
+    }
+
+    getSpeedLevel() {
+      return Math.floor(this.score / CONSTANTS.SPEED_INCREASE_INTERVAL) + 1;
     }
 
     loadHighScore() {
@@ -1590,6 +1639,8 @@
       this.score = 0;
       this.isNewHighScore = false;
       this.gameOverTimer = 0;
+      this.speedBannerTimer = 0;
+      this.speedBannerText = '';
       this.roadster.reset();
       this.obstacles.reset();
       this.particles.reset();
@@ -1620,6 +1671,12 @@
     update(dt) {
       this.totalTime += dt;
 
+      if (this.speedBannerTimer > 0) {
+        this.speedBannerTimer = Math.max(0, this.speedBannerTimer - dt);
+      }
+
+      const currentSpeed = this.state === 'PLAYING' ? this.getScrollSpeed() : CONSTANTS.BASE_SCROLL_SPEED;
+
       // Audio mute toggle via M key
       if (this.input.muteToggled) {
         this.audio.toggleMute();
@@ -1627,9 +1684,9 @@
 
       // State machine logic
       if (this.state === 'TITLE') {
-        this.background.update(dt, false);
-        this.roadster.update(dt, false, false, this.particles, false);
-        this.particles.update(dt);
+        this.background.update(dt, false, CONSTANTS.BASE_SCROLL_SPEED);
+        this.roadster.update(dt, false, false, this.particles, false, CONSTANTS.BASE_SCROLL_SPEED);
+        this.particles.update(dt, CONSTANTS.BASE_SCROLL_SPEED);
 
         // Start game on space or click
         if (this.input.anyKeyJustPressed || this.input.thrustJustPressed) {
@@ -1639,18 +1696,28 @@
         // Continuous thruster audio control
         this.audio.setThrusterActive(this.input.isThrusting, this.input.thrustJustPressed);
 
-        this.background.update(dt, true);
-        this.roadster.update(dt, this.input.isThrusting, this.input.thrustJustPressed, this.particles, true);
-        this.obstacles.update(dt, true, () => {
+        this.background.update(dt, true, currentSpeed);
+        this.roadster.update(dt, this.input.isThrusting, this.input.thrustJustPressed, this.particles, true, currentSpeed);
+        this.obstacles.update(dt, true, currentSpeed, () => {
           this.score++;
           if (this.score > this.highScore) {
             this.highScore = this.score;
             this.isNewHighScore = true;
             this.saveHighScore(this.highScore);
           }
-          this.audio.playScorePing();
+
+          // Every 5 points: increase game speed with celebratory chime & HUD banner
+          if (this.score % CONSTANTS.SPEED_INCREASE_INTERVAL === 0) {
+            const nextLvl = this.getSpeedLevel();
+            const nextSpeed = this.getScrollSpeed();
+            this.speedBannerTimer = 1.8;
+            this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} MPH)`;
+            this.audio.playSpeedUpPing();
+          } else {
+            this.audio.playScorePing();
+          }
         });
-        this.particles.update(dt);
+        this.particles.update(dt, currentSpeed);
 
         // Collision check
         if (this.obstacles.checkCollision(this.roadster.getHitbox())) {
@@ -1660,8 +1727,8 @@
         this.gameOverTimer += dt;
         this.audio.setThrusterActive(false);
 
-        this.background.update(dt, false);
-        this.particles.update(dt);
+        this.background.update(dt, false, CONSTANTS.BASE_SCROLL_SPEED);
+        this.particles.update(dt, CONSTANTS.BASE_SCROLL_SPEED);
 
         // Restart on space / click after brief lock delay (0.4s to prevent accidental skip)
         if (this.gameOverTimer > 0.45 && (this.input.anyKeyJustPressed || this.input.thrustJustPressed)) {
@@ -1832,6 +1899,40 @@
         ctx.strokeStyle = '#2f3542';
         ctx.strokeRect(20, 30, 110, 8);
 
+        // Speed & Level HUD indicator
+        const curSpeed = this.getScrollSpeed();
+        const curLvl = this.getSpeedLevel();
+        ctx.fillStyle = '#00d2d3';
+        ctx.font = '700 11px monospace';
+        ctx.fillText(`SPEED: ${curSpeed} MPH  [LVL ${curLvl}]`, 20, 52);
+
+        // Floating Speed Increase alert notification
+        if (this.speedBannerTimer > 0) {
+          ctx.save();
+          ctx.textAlign = 'center';
+          const progress = this.speedBannerTimer / 1.8;
+          const alpha = Math.min(1.0, progress * 2.5);
+          const floatY = 125 - (1.0 - progress) * 18;
+
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = `rgba(12, 16, 26, ${alpha * 0.90})`;
+          ctx.strokeStyle = `rgba(0, 240, 255, ${alpha * 0.95})`;
+          ctx.lineWidth = 1.6;
+
+          const bWidth = 330;
+          const bHeight = 40;
+          ctx.beginPath();
+          ctx.roundRect(W / 2 - bWidth / 2, floatY - 26, bWidth, bHeight, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.fillText(this.speedBannerText, W / 2, floatY);
+          ctx.restore();
+        }
+
         ctx.restore();
       } else if (this.state === 'GAMEOVER') {
         // Game Over Panel
@@ -1839,7 +1940,7 @@
         ctx.textAlign = 'center';
 
         const panelW = 340;
-        const panelH = 210;
+        const panelH = 226;
         const panelX = W / 2 - panelW / 2;
         const panelY = H / 2 - panelH / 2 - 15;
 
@@ -1856,32 +1957,37 @@
         ctx.fillStyle = '#e74c3c';
         ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.letterSpacing = '1px';
-        ctx.fillText('FLIGHT TERMINATED', W / 2, panelY + 38);
+        ctx.fillText('FLIGHT TERMINATED', W / 2, panelY + 36);
 
         // Score row
         ctx.fillStyle = '#a4b0be';
         ctx.font = '600 13px monospace';
-        ctx.fillText('FINAL SCORE', W / 2, panelY + 70);
+        ctx.fillText('FINAL SCORE', W / 2, panelY + 68);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 38px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(this.score, W / 2, panelY + 110);
+        ctx.fillText(this.score, W / 2, panelY + 106);
+
+        // Top speed reached
+        ctx.fillStyle = '#00d2d3';
+        ctx.font = '700 12px monospace';
+        ctx.fillText(`TOP SPEED: ${this.getScrollSpeed()} MPH [LVL ${this.getSpeedLevel()}]`, W / 2, panelY + 130);
 
         // Best score & New High Score badge
         ctx.font = '700 13px monospace';
         if (this.isNewHighScore) {
           ctx.fillStyle = '#2ed573';
-          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, W / 2, panelY + 138);
+          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, W / 2, panelY + 152);
         } else {
           ctx.fillStyle = '#ffd32a';
-          ctx.fillText(`BEST RECORD: ${this.highScore}`, W / 2, panelY + 138);
+          ctx.fillText(`BEST RECORD: ${this.highScore}`, W / 2, panelY + 152);
         }
 
         // Restart prompt
         const promptPulse = Math.sin(this.totalTime * 5.0) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(255, 255, 255, ${promptPulse})`;
         ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', W / 2, panelY + 182);
+        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', W / 2, panelY + 196);
 
         ctx.restore();
       }
