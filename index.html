@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flappy Tesla - Cold-Gas Thruster Flight Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #08070d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      background-color: #0b091a;
+      cursor: pointer;
+    }
+    /* Subtle CRT / scanline atmosphere */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 26, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      opacity: 0.35;
+      mix-blend-mode: overlay;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div class="scanlines"></div>
+  </div>
+
+  <script>
+  'use strict';
+
+  // ============================================================================
+  // 1. TUNING CONSTANTS
+  // Edit these parameters to tune the flight physics, gameplay, and obstacles.
+  // ============================================================================
+  const CONSTANTS = {
+    // Physics constants (pixels / sec^2 and pixels / sec)
+    GRAVITY: 980,             // Downward acceleration pulling the car
+    THRUST_ACCEL: 1950,       // Upward acceleration applied continuously while holding SPACE
+    MAX_FALL_SPEED: 520,      // Terminal downward velocity (smooth clamp)
+    MAX_CLIMB_SPEED: -420,    // Terminal upward climb velocity (smooth clamp)
+
+    // World & obstacle geometry
+    SCROLL_SPEED: 210,        // Horizontal world scroll speed (pixels / sec)
+    PIPE_GAP: 165,            // Vertical clearance gap between upper & lower Starbase towers
+    PIPE_WIDTH: 74,           // Width of the Starbase launch tower pillars
+    PIPE_SPAWN_INTERVAL: 1.90,// Seconds between new tower pair spawns
+    PIPE_MIN_GAP_Y: 110,      // Minimum height of the gap center from ceiling
+    PIPE_MAX_GAP_Y: 410,      // Maximum height of the gap center from ground
+    GROUND_HEIGHT: 50,        // Height of the Starbase tarmac & desert ground
+    CEILING_HEIGHT: 12,       // Top boundary ceiling buffer
+
+    // Car sprite & hitbox configuration
+    CAR_WIDTH: 68,            // Visual width of Tesla Roadster
+    CAR_HEIGHT: 21,           // Visual height of Tesla Roadster
+    HITBOX_INSET_X: 7,        // Hitbox horizontal safety padding (smaller than sprite)
+    HITBOX_INSET_Y: 5,        // Hitbox vertical safety padding
+
+    // Virtual canvas resolution (16:9 widescreen retro arcade aspect ratio)
+    VIRTUAL_WIDTH: 960,
+    VIRTUAL_HEIGHT: 540,
+
+    // Thruster timing
+    THRUST_RAMP_UP: 0.035,    // Seconds for thrusters to reach full output
+    THRUST_RAMP_DOWN: 0.150,  // Seconds for thruster plumes to taper off after release
+  };
+
+  // ============================================================================
+  // 2. INPUT SYSTEM (Keyboard, Mouse, Touch with continuous hold support)
+  // ============================================================================
+  class InputHandler {
+    constructor() {
+      this.isThrusting = false;
+      this.thrustJustPressed = false;
+      this.anyKeyJustPressed = false;
+      this.muteToggled = false;
+
+      // Event listeners
+      window.addEventListener('keydown', (e) => this.onKeyDown(e));
+      window.addEventListener('keyup', (e) => this.onKeyUp(e));
+
+      // Pointer events (handles both mouse and touch transparently)
+      const canvas = document.getElementById('gameCanvas');
+      canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+      window.addEventListener('pointerup', (e) => this.onPointerUp(e));
+      window.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+
+      // Prevent default touch gestures (scrolling/zoom)
+      canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+      canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+
+      // Window blur safety
+      window.addEventListener('blur', () => {
+        this.isThrusting = false;
+      });
+    }
+
+    onKeyDown(e) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!this.isThrusting) {
+          this.thrustJustPressed = true;
+        }
+        this.isThrusting = true;
+        this.anyKeyJustPressed = true;
+      } else if (e.code === 'KeyM') {
+        this.muteToggled = true;
+      }
+    }
+
+    onKeyUp(e) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        this.isThrusting = false;
+      }
+    }
+
+    onPointerDown(e) {
+      e.preventDefault();
+      const canvas = document.getElementById('gameCanvas');
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CONSTANTS.VIRTUAL_WIDTH / rect.width;
+      const scaleY = CONSTANTS.VIRTUAL_HEIGHT / rect.height;
+      const clickX = (e.clientX - rect.left) * scaleX;
+      const clickY = (e.clientY - rect.top) * scaleY;
+
+      // Clickable HUD mute toggle button in top right
+      if (clickX > CONSTANTS.VIRTUAL_WIDTH - 150 && clickY < 45) {
+        this.muteToggled = true;
+        return;
+      }
+
+      if (!this.isThrusting) {
+        this.thrustJustPressed = true;
+      }
+      this.isThrusting = true;
+      this.anyKeyJustPressed = true;
+    }
+
+    onPointerUp(e) {
+      this.isThrusting = false;
+    }
+
+    // Clear one-frame triggers at end of each frame
+    endFrame() {
+      this.thrustJustPressed = false;
+      this.anyKeyJustPressed = false;
+      this.muteToggled = false;
+    }
+  }
+
+  // ============================================================================
+  // 3. SYNTHESIZED AUDIO SYSTEM (Pure Web Audio API - zero external files)
+  // Cold-gas thruster hiss, initial valve pop, score ping, crash impact.
+  // ============================================================================
+  class SoundManager {
+    constructor() {
+      this.ctx = null;
+      this.masterGain = null;
+      this.isMuted = false;
+      this.isInitialized = false;
+      this.isThrusterSounding = false;
+
+      // Thruster continuous hiss nodes
+      this.noiseBuffer = null;
+      this.thrusterSource = null;
+      this.thrusterFilter = null;
+      this.thrusterHighpass = null;
+      this.thrusterGain = null;
+      this.isHissRunning = false;
+    }
+
+    init() {
+      if (this.isInitialized) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = this.isMuted ? 0 : 0.65;
+        this.masterGain.connect(this.ctx.destination);
+
+        // Pre-generate 3 seconds of white noise for cold-gas thruster loops
+        const bufferSize = this.ctx.sampleRate * 3;
+        this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        this.setupThrusterLoop();
+        this.isInitialized = true;
+      } catch (err) {
+        console.warn('Web Audio API not supported or blocked:', err);
+      }
+    }
+
+    resume() {
+      if (!this.isInitialized) this.init();
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    }
+
+    setupThrusterLoop() {
+      if (!this.ctx || !this.noiseBuffer) return;
+
+      // Looping noise source
+      this.thrusterSource = this.ctx.createBufferSource();
+      this.thrusterSource.buffer = this.noiseBuffer;
+      this.thrusterSource.loop = true;
+
+      // Bandpass filter centered on aerodynamic gas hiss (~1800Hz)
+      this.thrusterFilter = this.ctx.createBiquadFilter();
+      this.thrusterFilter.type = 'bandpass';
+      this.thrusterFilter.frequency.value = 1750;
+      this.thrusterFilter.Q.value = 1.6;
+
+      // Highpass filter to eliminate muddy sub-bass rumble from gas hiss
+      this.thrusterHighpass = this.ctx.createBiquadFilter();
+      this.thrusterHighpass.type = 'highpass';
+      this.thrusterHighpass.frequency.value = 650;
+
+      // Gain envelope for fast attack (~30ms) and release (~120ms)
+      this.thrusterGain = this.ctx.createGain();
+      this.thrusterGain.gain.value = 0.0001; // Silent start
+
+      this.thrusterSource.connect(this.thrusterFilter);
+      this.thrusterFilter.connect(this.thrusterHighpass);
+      this.thrusterHighpass.connect(this.thrusterGain);
+      this.thrusterGain.connect(this.masterGain);
+
+      this.thrusterSource.start(0);
+      this.isHissRunning = true;
+    }
+
+    // Cold-gas thruster acoustic control:
+    // Fast attack on press, smooth release on let-go, slight filter modulation
+    setThrusterActive(active, justStarted = false) {
+      if (!this.ctx || !this.thrusterGain) return;
+      this.resume();
+
+      const now = this.ctx.currentTime;
+      if (active) {
+        if (!this.isThrusterSounding || justStarted) {
+          this.isThrusterSounding = true;
+
+          // Play initial cold-gas solenoid valve "pssht" burst
+          this.playValvePuff();
+
+          // Organic acoustic variation: slightly randomize filter center frequency
+          const freq = 1750 + (Math.random() - 0.5) * 350;
+          this.thrusterFilter.frequency.cancelScheduledValues(now);
+          this.thrusterFilter.frequency.setValueAtTime(freq, now);
+
+          // Fast attack (~30ms) up to full hiss volume
+          this.thrusterGain.gain.cancelScheduledValues(now);
+          this.thrusterGain.gain.setTargetAtTime(0.32, now, 0.012);
+        }
+      } else {
+        if (this.isThrusterSounding) {
+          this.isThrusterSounding = false;
+
+          // Fast release (~120ms) tapering off smoothly
+          this.thrusterGain.gain.cancelScheduledValues(now);
+          this.thrusterGain.gain.setTargetAtTime(0.0001, now, 0.040);
+        }
+      }
+    }
+
+    // High-pressure cold gas valve "pssht" transient
+    playValvePuff() {
+      if (!this.ctx || this.isMuted) return;
+      const now = this.ctx.currentTime;
+
+      const puffSource = this.ctx.createBufferSource();
+      puffSource.buffer = this.noiseBuffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 2800 + Math.random() * 600;
+
+      const puffGain = this.ctx.createGain();
+      puffGain.gain.setValueAtTime(0.38, now);
+      puffGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+      puffSource.connect(filter);
+      filter.connect(puffGain);
+      puffGain.connect(this.masterGain);
+
+      puffSource.start(now);
+      puffSource.stop(now + 0.06);
+    }
+
+    // Score ping on successfully clearing a Starbase tower segment
+    playScorePing() {
+      if (!this.ctx || this.isMuted) return;
+      this.resume();
+      const now = this.ctx.currentTime;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      // Dual-tone harmonic blip: starts at 880Hz (A5), glides cleanly to 1320Hz (E6)
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.10);
+
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.17);
+    }
+
+    // Crash sound: violent noise burst + low-frequency impact thud
+    playCrash() {
+      if (!this.ctx || this.isMuted) return;
+      this.resume();
+      const now = this.ctx.currentTime;
+      this.isThrusterSounding = false;
+
+      // Immediately silence thruster hiss on crash
+      if (this.thrusterGain) {
+        this.thrusterGain.gain.cancelScheduledValues(now);
+        this.thrusterGain.gain.setValueAtTime(0.0001, now);
+      }
+
+      // 1. Heavy low-frequency sub-bass thud (130Hz -> 35Hz drop)
+      const thudOsc = this.ctx.createOscillator();
+      const thudGain = this.ctx.createGain();
+      thudOsc.type = 'triangle';
+      thudOsc.frequency.setValueAtTime(130, now);
+      thudOsc.frequency.exponentialRampToValueAtTime(32, now + 0.38);
+
+      thudGain.gain.setValueAtTime(0.55, now);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
+
+      thudOsc.connect(thudGain);
+      thudGain.connect(this.masterGain);
+
+      thudOsc.start(now);
+      thudOsc.stop(now + 0.42);
+
+      // 2. High-impact crunch noise
+      if (this.noiseBuffer) {
+        const crashSource = this.ctx.createBufferSource();
+        crashSource.buffer = this.noiseBuffer;
+
+        const crashFilter = this.ctx.createBiquadFilter();
+        crashFilter.type = 'lowpass';
+        crashFilter.frequency.setValueAtTime(950, now);
+        crashFilter.frequency.exponentialRampToValueAtTime(200, now + 0.35);
+
+        const crashGain = this.ctx.createGain();
+        crashGain.gain.setValueAtTime(0.48, now);
+        crashGain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+
+        crashSource.connect(crashFilter);
+        crashFilter.connect(crashGain);
+        crashGain.connect(this.masterGain);
+
+        crashSource.start(now);
+        crashSource.stop(now + 0.38);
+      }
+    }
+
+    toggleMute() {
+      this.isMuted = !this.isMuted;
+      if (this.masterGain && this.ctx) {
+        this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
+      }
+      return this.isMuted;
+    }
+  }
+
+  // ============================================================================
+  // 4. PARTICLE SYSTEM & VISUAL EFFECTS
+  // Cold-gas plumes, puff bursts, dust ripples, vapor trails, speed lines, debris
+  // ============================================================================
+  class ParticleSystem {
+    constructor() {
+      this.particles = [];
+      this.shockwaves = [];
+      this.speedLines = [];
+      this.debris = [];
+      this.screenFlash = 0;
+      this.cameraShake = 0;
+
+      // Seed initial speed lines across the screen
+      for (let i = 0; i < 18; i++) {
+        this.speedLines.push({
+          x: Math.random() * CONSTANTS.VIRTUAL_WIDTH,
+          y: Math.random() * (CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT - 30) + 15,
+          length: Math.random() * 45 + 25,
+          speed: Math.random() * 320 + 380,
+          alpha: Math.random() * 0.22 + 0.08
+        });
+      }
+    }
+
+    reset() {
+      this.particles = [];
+      this.shockwaves = [];
+      this.debris = [];
+      this.screenFlash = 0;
+      this.cameraShake = 0;
+    }
+
+    // --------------------------------------------------------------------------
+    // EMITTER: Continuous cold-gas plume
+    // Cold gas is pressurized nitrogen: dense white / ice-pale-blue vapor that
+    // rapidly expands, billows, and fades without flame or dark soot.
+    // --------------------------------------------------------------------------
+    emitColdGasPlume(x, y, angle, velocityX, velocityY, intensity = 1.0) {
+      const count = Math.ceil(2 * intensity);
+      for (let i = 0; i < count; i++) {
+        // Random conical spread angle behind/under the nozzle
+        const spreadAngle = angle + (Math.random() - 0.5) * 0.55;
+        const speed = (Math.random() * 220 + 260) * intensity;
+        const vx = velocityX + Math.cos(spreadAngle) * speed + (Math.random() - 0.5) * 35;
+        const vy = velocityY + Math.sin(spreadAngle) * speed + (Math.random() - 0.5) * 35;
+        const size = Math.random() * 4 + 3.5;
+        const alpha = Math.random() * 0.35 + 0.60;
+
+        this.particles.push({
+          type: 'gas',
+          x: x + (Math.random() - 0.5) * 4,
+          y: y + (Math.random() - 0.5) * 4,
+          vx: vx,
+          vy: vy,
+          size: size,
+          currentSize: size,
+          maxSize: Math.random() * 18 + 18,
+          life: 0,
+          maxLife: Math.random() * 0.28 + 0.28,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 7,
+          // Pale cyan / glacial ice-white cold gas coloration
+          colorH: Math.random() > 0.4 ? 195 : 210, // Cyan/ice-blue hue
+          colorS: Math.random() * 35 + 40,
+          colorL: Math.random() * 20 + 80,
+          alphaStart: alpha,
+          currentAlpha: alpha
+        });
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // EMITTER: Initial intense puff burst when thrusting begins
+    // --------------------------------------------------------------------------
+    emitPuffBurst(x, y, angle) {
+      // Rapid radial shockwave halo
+      this.shockwaves.push({
+        x: x,
+        y: y,
+        radius: 4,
+        currentRadius: 4,
+        maxRadius: 36,
+        life: 0,
+        maxLife: 0.18,
+        alpha: 0.8,
+        currentAlpha: 0.8
+      });
+
+      // Fan of high-velocity cold gas droplets
+      for (let i = 0; i < 18; i++) {
+        const spreadAngle = angle + (Math.random() - 0.5) * 1.1;
+        const speed = Math.random() * 380 + 280;
+        const size = Math.random() * 5 + 4;
+        const alpha = 0.85;
+        this.particles.push({
+          type: 'gas',
+          x: x,
+          y: y,
+          vx: Math.cos(spreadAngle) * speed,
+          vy: Math.sin(spreadAngle) * speed,
+          size: size,
+          currentSize: size,
+          maxSize: Math.random() * 24 + 18,
+          life: 0,
+          maxLife: Math.random() * 0.25 + 0.22,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 10,
+          colorH: 195,
+          colorS: 60,
+          colorL: 90,
+          alphaStart: alpha,
+          currentAlpha: alpha
+        });
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // EMITTER: Ground dust & vapor ripple when car is near desert floor
+    // --------------------------------------------------------------------------
+    emitGroundDust(x, groundY, intensity) {
+      const count = Math.ceil(3 * intensity);
+      for (let i = 0; i < count; i++) {
+        const dir = Math.random() > 0.45 ? 1 : -1;
+        const size = Math.random() * 4 + 3;
+        this.particles.push({
+          type: 'ground_dust',
+          x: x + (Math.random() - 0.5) * 18,
+          y: groundY - Math.random() * 3,
+          vx: dir * (Math.random() * 160 + 90) - CONSTANTS.SCROLL_SPEED * 0.3,
+          vy: -(Math.random() * 30 + 10),
+          size: size,
+          currentSize: size,
+          maxSize: Math.random() * 16 + 12,
+          life: 0,
+          maxLife: Math.random() * 0.35 + 0.25,
+          // Warm desert sand / dust color
+          color: 'rgba(230, 205, 175, ',
+          alphaStart: 0.45,
+          currentAlpha: 0.45
+        });
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // EMITTER: Aerodynamic vapor trail off spoiler wingtip
+    // --------------------------------------------------------------------------
+    emitVaporTrail(x, y) {
+      this.particles.push({
+        type: 'vapor_trail',
+        x: x,
+        y: y + (Math.random() - 0.5) * 2,
+        vx: -CONSTANTS.SCROLL_SPEED * 0.85,
+        vy: (Math.random() - 0.5) * 12,
+        size: 3,
+        currentSize: 3,
+        maxSize: 12,
+        life: 0,
+        maxLife: 0.32,
+        alphaStart: 0.30,
+        currentAlpha: 0.30
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // EMITTER: Game over crash explosion (fragments, carbon panels, vapor)
+    // --------------------------------------------------------------------------
+    emitCrashExplosion(x, y) {
+      this.screenFlash = 1.0;
+      this.cameraShake = 16.0;
+
+      // Vapor cloud explosion
+      for (let i = 0; i < 35; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 340 + 80;
+        const size = Math.random() * 6 + 5;
+        const alpha = 0.95;
+        this.particles.push({
+          type: 'gas',
+          x: x,
+          y: y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          size: size,
+          currentSize: size,
+          maxSize: Math.random() * 34 + 20,
+          life: 0,
+          maxLife: Math.random() * 0.45 + 0.3,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 8,
+          colorH: Math.random() > 0.5 ? 200 : 15, // White vapor with fiery sparks
+          colorS: 70,
+          colorL: 85,
+          alphaStart: alpha,
+          currentAlpha: alpha
+        });
+      }
+
+      // Tesla Roadster structural debris pieces (red body panels, wheels, titanium rods)
+      const debrisColors = ['#e01020', '#b50c18', '#1c1c1f', '#dcdde1', '#e84118'];
+      for (let i = 0; i < 28; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 380 + 90;
+        this.debris.push({
+          x: x,
+          y: y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - 90, // Upward bias
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 18,
+          w: Math.random() * 10 + 4,
+          h: Math.random() * 6 + 3,
+          color: debrisColors[Math.floor(Math.random() * debrisColors.length)],
+          life: 0,
+          maxLife: 2.2,
+          bounceCount: 0
+        });
+      }
+    }
+
+    update(dt) {
+      // Screen flash decay
+      if (this.screenFlash > 0) {
+        this.screenFlash = Math.max(0, this.screenFlash - dt * 4.5);
+      }
+
+      // Camera shake decay
+      if (this.cameraShake > 0) {
+        this.cameraShake = Math.max(0, this.cameraShake - dt * 26);
+      }
+
+      // Update gas particles
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.life += dt;
+        if (p.life >= p.maxLife) {
+          this.particles.splice(i, 1);
+          continue;
+        }
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rotation += p.rotSpeed * dt;
+
+        // Aerodynamic drag slows down expanding gas
+        p.vx *= Math.pow(0.15, dt);
+        p.vy *= Math.pow(0.20, dt);
+
+        // Particle expands as gas diffuses
+        const progress = p.life / p.maxLife;
+        p.currentSize = p.size + (p.maxSize - p.size) * progress;
+        p.currentAlpha = p.alphaStart * (1 - progress);
+      }
+
+      // Update shockwaves
+      for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+        const sw = this.shockwaves[i];
+        sw.life += dt;
+        if (sw.life >= sw.maxLife) {
+          this.shockwaves.splice(i, 1);
+          continue;
+        }
+        const prog = sw.life / sw.maxLife;
+        sw.currentRadius = sw.radius + (sw.maxRadius - sw.radius) * prog;
+        sw.currentAlpha = sw.alpha * (1 - prog);
+      }
+
+      // Update speed lines
+      for (const line of this.speedLines) {
+        line.x -= line.speed * dt;
+        if (line.x + line.length < 0) {
+          line.x = CONSTANTS.VIRTUAL_WIDTH + Math.random() * 80;
+          line.y = Math.random() * (CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT - 30) + 15;
+          line.speed = Math.random() * 320 + 380;
+        }
+      }
+
+      // Update physical crash debris
+      const groundLevel = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
+      for (let i = this.debris.length - 1; i >= 0; i--) {
+        const d = this.debris[i];
+        d.life += dt;
+        if (d.life >= d.maxLife) {
+          this.debris.splice(i, 1);
+          continue;
+        }
+
+        d.vy += CONSTANTS.GRAVITY * dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.rot += d.rotSpeed * dt;
+
+        // Ground bounce collision
+        if (d.y > groundLevel - 2) {
+          d.y = groundLevel - 2;
+          d.vy = -d.vy * 0.45;
+          d.vx *= 0.65;
+          d.rotSpeed *= 0.5;
+          d.bounceCount++;
+        }
+      }
+    }
+
+    render(ctx) {
+      // 1. Render speed lines
+      ctx.save();
+      ctx.strokeStyle = 'rgba(210, 235, 255, 0.18)';
+      ctx.lineWidth = 1.2;
+      for (const line of this.speedLines) {
+        ctx.beginPath();
+        ctx.moveTo(line.x, line.y);
+        ctx.lineTo(line.x + line.length, line.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 2. Render shockwave rings
+      for (const sw of this.shockwaves) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.currentRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(200, 240, 255, ${sw.currentAlpha})`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. Render vapor trails & ground dust
+      for (const p of this.particles) {
+        if (p.type === 'ground_dust') {
+          ctx.save();
+          ctx.fillStyle = `${p.color}${p.currentAlpha})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.currentSize, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (p.type === 'vapor_trail') {
+          ctx.save();
+          ctx.fillStyle = `rgba(220, 240, 255, ${p.currentAlpha})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.currentSize, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // 4. Render cold-gas plumes with soft additive screen glow
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (const p of this.particles) {
+        if (p.type === 'gas') {
+          const rad = Math.max(0.5, (typeof p.currentSize === 'number' && !isNaN(p.currentSize)) ? p.currentSize : (p.size || 4));
+          const alpha = Math.max(0, Math.min(1, (typeof p.currentAlpha === 'number' && !isNaN(p.currentAlpha)) ? p.currentAlpha : (p.alphaStart || 0.5)));
+          if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(rad) || rad <= 0) continue;
+
+          const grad = ctx.createRadialGradient(p.x, p.y, rad * 0.08, p.x, p.y, rad);
+          // Pure white high-density core, cooling into translucent ice-blue
+          grad.addColorStop(0, `hsla(${p.colorH}, ${p.colorS}%, 96%, ${alpha * 0.95})`);
+          grad.addColorStop(0.45, `hsla(${p.colorH}, ${p.colorS}%, ${p.colorL}%, ${alpha * 0.55})`);
+          grad.addColorStop(1, `hsla(${p.colorH + 10}, 80%, 85%, 0)`);
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      // 5. Render physical debris chunks
+      for (const d of this.debris) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rot);
+        const alpha = Math.max(0, 1 - (d.life / d.maxLife));
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = d.color;
+        ctx.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
+        ctx.restore();
+      }
+
+      // 6. Render screen flash on explosion
+      if (this.screenFlash > 0.01) {
+        ctx.save();
+        ctx.fillStyle = `rgba(255, 250, 240, ${this.screenFlash * 0.75})`;
+        ctx.fillRect(0, 0, CONSTANTS.VIRTUAL_WIDTH, CONSTANTS.VIRTUAL_HEIGHT);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ============================================================================
+  // 5. ROADSTER ENTITY
+  // Sleek red Tesla Roadster drawn with vector canvas paths.
+  // Pitch angle tilts dynamically with vertical velocity and thruster state.
+  // ============================================================================
+  class Roadster {
+    constructor(x, y) {
+      this.playX = x;
+      this.playY = y;
+      this.reset();
+    }
+
+    reset() {
+      this.x = this.playX;
+      this.y = this.playY;
+      this.vy = 0;
+      this.angle = 0;
+      this.wheelRotation = 0;
+      this.thrustOutput = 0; // Smooth 0 to 1 thruster envelope for visuals & sound
+      this.alive = true;
+      this.idleTimer = 0;
+    }
+
+    // --------------------------------------------------------------------------
+    // FLIGHT PHYSICS UPDATE
+    // Comments on thrust physics:
+    // 1. Upward acceleration is applied while isThrusting is true.
+    // 2. Constant gravity pulls downward continuously.
+    // 3. Vertical velocity is smoothly integrated and clamped.
+    // 4. Thruster output ramps up in ~35ms and tapers down over ~150ms.
+    // --------------------------------------------------------------------------
+    update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying) {
+      if (!this.alive) return;
+
+      if (!isPlaying) {
+        // Centered graceful hovering floating bob on the title screen
+        this.idleTimer += dt * 3.2;
+        this.x = CONSTANTS.VIRTUAL_WIDTH / 2;
+        this.y = 195 + Math.sin(this.idleTimer) * 9;
+        this.angle = Math.sin(this.idleTimer * 0.8) * 0.04;
+        this.wheelRotation += dt * 2.2;
+
+        // Occasional gentle hover puff from underbody thruster
+        if (Math.sin(this.idleTimer * 2) > 0.94) {
+          particleSystem.emitColdGasPlume(this.x - 4, this.y + 8, Math.PI / 2 + 0.1, 0, 40, 0.4);
+        }
+        return;
+      }
+
+      // Smooth thruster output ramp up / down
+      if (isThrusting) {
+        this.thrustOutput = Math.min(1.0, this.thrustOutput + dt / CONSTANTS.THRUST_RAMP_UP);
+      } else {
+        this.thrustOutput = Math.max(0.0, this.thrustOutput - dt / CONSTANTS.THRUST_RAMP_DOWN);
+      }
+
+      // Thrust physics integration
+      if (isThrusting) {
+        this.vy -= CONSTANTS.THRUST_ACCEL * dt;
+      }
+      this.vy += CONSTANTS.GRAVITY * dt;
+
+      // Velocity clamp
+      this.vy = Math.max(CONSTANTS.MAX_CLIMB_SPEED, Math.min(CONSTANTS.MAX_FALL_SPEED, this.vy));
+
+      // Position update
+      this.y += this.vy * dt;
+
+      // Wheel spin while airborne
+      this.wheelRotation += dt * 14;
+
+      // Pitch tilting: nose pitches up slightly during climb/thrust, down when falling
+      let targetAngle = 0;
+      if (this.vy < 0) {
+        // vy is negative (upward) -> negative targetAngle -> counter-clockwise rotation -> NOSE UP
+        targetAngle = (this.vy / Math.abs(CONSTANTS.MAX_CLIMB_SPEED)) * 0.28;
+      } else {
+        // vy is positive (downward) -> positive targetAngle -> clockwise rotation -> NOSE DOWN
+        targetAngle = (this.vy / CONSTANTS.MAX_FALL_SPEED) * 0.40;
+      }
+      // Smooth interpolation for aerodynamic weight feel
+      this.angle += (targetAngle - this.angle) * Math.min(1.0, dt * 10);
+
+      // Nozzle world positions (accounting for car rotation)
+      const cosA = Math.cos(this.angle);
+      const sinA = Math.sin(this.angle);
+
+      // Local nozzle offsets:
+      // 1. Underbody ventral nozzle (mid-chassis pointing down: local lx = -4, ly = 8)
+      const underX = this.x + (-4 * cosA - 8 * sinA);
+      const underY = this.y + (-4 * sinA + 8 * cosA);
+      // Downward exhaust direction vector (relative to tilted car)
+      const underAngle = this.angle + Math.PI / 2 + 0.12;
+
+      // 2. Rear license-plate thruster nozzle (rear diffuser pointing back and down: local lx = -33, ly = 4)
+      const rearX = this.x + (-33 * cosA - 4 * sinA);
+      const rearY = this.y + (-33 * sinA + 4 * cosA);
+      // Rearward exhaust direction vector
+      const rearAngle = this.angle + Math.PI + 0.22;
+
+      // Initial burst puff shockwave
+      if (thrustJustPressed) {
+        particleSystem.emitPuffBurst(underX, underY, underAngle);
+        particleSystem.emitPuffBurst(rearX, rearY, rearAngle);
+      }
+
+      // Emit continuous cold-gas plume based on current thrust output
+      if (this.thrustOutput > 0.05) {
+        particleSystem.emitColdGasPlume(underX, underY, underAngle, -CONSTANTS.SCROLL_SPEED * 0.4, this.vy * 0.3, this.thrustOutput);
+        particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -CONSTANTS.SCROLL_SPEED * 0.5, this.vy * 0.2, this.thrustOutput);
+      }
+
+      // Aerodynamic vapor trail streaming off rear ducktail spoiler
+      const spoilerX = this.x + (-31 * cosA - (-7) * sinA);
+      const spoilerY = this.y + (-31 * sinA + (-7) * cosA);
+      if (Math.random() < 0.65) {
+        particleSystem.emitVaporTrail(spoilerX, spoilerY);
+      }
+
+      // Ground dust / vapor ripple effect when skimming low over the desert tarmac
+      const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
+      const altitude = groundY - (this.y + 10);
+      if (altitude < 85 && this.thrustOutput > 0.15) {
+        const dustIntensity = (1.0 - (altitude / 85)) * this.thrustOutput;
+        particleSystem.emitGroundDust(this.x, groundY, dustIntensity);
+      }
+    }
+
+    // Snug bounding box slightly inset from the visual sprite for fair arcade collisions
+    getHitbox() {
+      const hw = (CONSTANTS.CAR_WIDTH / 2) - CONSTANTS.HITBOX_INSET_X;
+      const hh = (CONSTANTS.CAR_HEIGHT / 2) - CONSTANTS.HITBOX_INSET_Y;
+      return {
+        left: this.x - hw,
+        right: this.x + hw,
+        top: this.y - hh,
+        bottom: this.y + hh
+      };
+    }
+
+    render(ctx) {
+      if (!this.alive) return;
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+
+      // ------------------------------------------------------------------------
+      // TESLA ROADSTER 2.0 SIDE-VIEW VECTOR ART
+      // Rendered with precise canvas paths: low aerodynamic nose, cabin bubble,
+      // carbon splitters, glowing red LED taillight, multi-spoke alloy wheels.
+      // ------------------------------------------------------------------------
+
+      // 1. Underbody Shadow & Carbon Fiber Diffuser / Front Splitter
+      ctx.fillStyle = '#141416';
+      ctx.beginPath();
+      ctx.moveTo(-33, 7);
+      ctx.lineTo(31, 7);
+      ctx.lineTo(34, 6);
+      ctx.lineTo(28, 4);
+      ctx.lineTo(-32, 4);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cold-gas thruster nozzle blocks (high-tech titanium canisters)
+      ctx.fillStyle = '#485460';
+      ctx.fillRect(-33, 2, 4, 5); // Rear nozzle bell
+      ctx.fillRect(-7, 6, 6, 3);  // Underbody ventral nozzle bell
+
+      // 2. Main Car Body (Multi-coat Tesla Metallic Red)
+      const bodyGrad = ctx.createLinearGradient(0, -10, 0, 8);
+      bodyGrad.addColorStop(0, '#ff3848');   // Top sun highlight
+      bodyGrad.addColorStop(0.35, '#d61122');// Tesla signature red
+      bodyGrad.addColorStop(0.85, '#a60a17');// Deep body flank
+      bodyGrad.addColorStop(1, '#5c050d');   // Underside shadow
+
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      // Start at sharp aerodynamic front nose tip
+      ctx.moveTo(33, 5);
+      // Front bumper curve up to hood
+      ctx.quadraticCurveTo(34, 1, 31, -1);
+      // Low sweeping front hood line
+      ctx.lineTo(13, -3);
+      // Windshield A-pillar incline
+      ctx.lineTo(2, -9);
+      // Curved aerodynamic glass roof arc
+      ctx.quadraticCurveTo(-10, -11, -18, -6);
+      // Rear fastback hatch sloping down to ducktail spoiler
+      ctx.lineTo(-27, -4);
+      // Ducktail spoiler lip
+      ctx.lineTo(-32, -5);
+      ctx.lineTo(-33, -3);
+      // Rear bumper drop down to diffuser
+      ctx.quadraticCurveTo(-33, 2, -31, 6);
+      // Bottom rocker panel line towards front
+      ctx.lineTo(26, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. Cabin Bubble / Tinted Glass Canopy
+      const glassGrad = ctx.createLinearGradient(-10, -11, 5, -2);
+      glassGrad.addColorStop(0, '#1a2233');
+      glassGrad.addColorStop(0.6, '#0f1420');
+      glassGrad.addColorStop(1, '#27384e');
+
+      ctx.fillStyle = glassGrad;
+      ctx.beginPath();
+      ctx.moveTo(11, -3);
+      ctx.lineTo(1, -8.5);
+      ctx.quadraticCurveTo(-10, -10.2, -18, -5.5);
+      ctx.lineTo(-21, -3.5);
+      ctx.lineTo(9, -2.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // White diagonal specular gleam on windshield
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(2, -8);
+      ctx.lineTo(7, -3.5);
+      ctx.stroke();
+
+      // Driver silhouette hint inside cabin
+      ctx.fillStyle = '#0a0d14';
+      ctx.beginPath();
+      ctx.arc(-5, -5.5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 4. Subtle Body Contour Highlights & Shoulder Line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(30, 0);
+      ctx.lineTo(12, -2.2);
+      ctx.quadraticCurveTo(-12, -1, -30, -3.5);
+      ctx.stroke();
+
+      // 5. Sleek Front Headlight Slit (Glowing futuristic white/cyan LED)
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(33, 3);
+      ctx.lineTo(26, 1.5);
+      ctx.lineTo(29, 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0; // Reset shadow
+
+      // 6. Glowing Red LED Lightbar Taillight
+      ctx.fillStyle = '#ff2030';
+      ctx.shadowColor = '#ff0020';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(-33.5, -4, 2.2, 3);
+      ctx.shadowBlur = 0; // Reset shadow
+
+      // 7. Wheels & Tires
+      // Front wheel at x: 19, Rear wheel at x: -20
+      this.drawWheel(ctx, 19, 6.5, this.wheelRotation);
+      this.drawWheel(ctx, -20, 6.5, this.wheelRotation);
+
+      ctx.restore();
+    }
+
+    drawWheel(ctx, x, y, rotation) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Dark wheel well cutout behind tire
+      ctx.fillStyle = '#0a0910';
+      ctx.beginPath();
+      ctx.arc(0, -1, 6.8, Math.PI, 0, false);
+      ctx.fill();
+
+      // Outer rubber performance tire
+      ctx.fillStyle = '#1c1c20';
+      ctx.beginPath();
+      ctx.arc(0, 0, 6.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tire sidewall rim
+      ctx.strokeStyle = '#2d2d34';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Red Brembo performance brake caliper
+      ctx.fillStyle = '#e81123';
+      ctx.fillRect(-2, -4.5, 3.5, 2);
+
+      // Gunmetal alloy wheel rim & spinning spokes
+      ctx.rotate(rotation);
+      ctx.strokeStyle = '#95a5a6';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const ang = (i * Math.PI * 2) / 5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ang) * 4.2, Math.sin(ang) * 4.2);
+        ctx.stroke();
+      }
+
+      // Center wheel hub cap (Tesla chrome logo dot)
+      ctx.fillStyle = '#ecf0f1';
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  // ============================================================================
+  // 6. STARBASE LAUNCH TOWER OBSTACLES
+  // SpaceX / Starbase launch-tower pillars (steel lattice trusses, warning stripes,
+  // aviation strobe beacons, caution bumpers).
+  // ============================================================================
+  class ObstacleManager {
+    constructor() {
+      this.towers = [];
+      this.spawnTimer = 0;
+      this.strobeTimer = 0;
+    }
+
+    reset() {
+      this.towers = [];
+      this.spawnTimer = 0.5; // Spawn first tower quickly after game start
+    }
+
+    update(dt, isPlaying, scoreCallback) {
+      if (!isPlaying) return;
+
+      this.strobeTimer += dt * 3.5;
+      this.spawnTimer -= dt;
+      if (this.spawnTimer <= 0) {
+        this.spawnTowerPair();
+        this.spawnTimer = CONSTANTS.PIPE_SPAWN_INTERVAL;
+      }
+
+      for (let i = this.towers.length - 1; i >= 0; i--) {
+        const tower = this.towers[i];
+        tower.x -= CONSTANTS.SCROLL_SPEED * dt;
+
+        // Score trigger: when the car passes the tower center
+        if (!tower.passed && tower.x + CONSTANTS.PIPE_WIDTH / 2 < 220) {
+          tower.passed = true;
+          scoreCallback();
+        }
+
+        // Despawn towers once fully off the left edge of the screen
+        if (tower.x + CONSTANTS.PIPE_WIDTH < -20) {
+          this.towers.splice(i, 1);
+        }
+      }
+    }
+
+    spawnTowerPair() {
+      // Random gap center between safe bounds
+      const gapY = CONSTANTS.PIPE_MIN_GAP_Y +
+        Math.random() * (CONSTANTS.PIPE_MAX_GAP_Y - CONSTANTS.PIPE_MIN_GAP_Y);
+
+      this.towers.push({
+        x: CONSTANTS.VIRTUAL_WIDTH + 20,
+        gapY: gapY,
+        gapHeight: CONSTANTS.PIPE_GAP,
+        width: CONSTANTS.PIPE_WIDTH,
+        passed: false
+      });
+    }
+
+    // Check collision between car hitbox and towers
+    checkCollision(carHitbox) {
+      const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
+
+      // Ceiling and ground boundaries
+      if (carHitbox.top <= CONSTANTS.CEILING_HEIGHT) return true;
+      if (carHitbox.bottom >= groundY) return true;
+
+      for (const t of this.towers) {
+        const tLeft = t.x;
+        const tRight = t.x + t.width;
+        const gapTop = t.gapY - t.gapHeight / 2;
+        const gapBottom = t.gapY + t.gapHeight / 2;
+
+        // Check horizontal overlap with tower
+        if (carHitbox.right > tLeft && carHitbox.left < tRight) {
+          // Check if hitting upper tower or lower tower
+          if (carHitbox.top < gapTop || carHitbox.bottom > gapBottom) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    render(ctx) {
+      const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
+      const isStrobeOn = Math.sin(this.strobeTimer) > 0.3;
+
+      for (const t of this.towers) {
+        const gapTop = t.gapY - t.gapHeight / 2;
+        const gapBottom = t.gapY + t.gapHeight / 2;
+
+        // 1. Draw Upper Starbase Tower Segment (hanging down from ceiling)
+        this.drawTowerSegment(ctx, t.x, 0, t.width, gapTop, true, isStrobeOn);
+
+        // 2. Draw Lower Starbase Tower Segment (rising up from tarmac)
+        this.drawTowerSegment(ctx, t.x, gapBottom, t.width, groundY - gapBottom, false, isStrobeOn);
+      }
+    }
+
+    drawTowerSegment(ctx, x, y, width, height, isUpper, isStrobeOn) {
+      if (height <= 2) return;
+
+      ctx.save();
+
+      // Outer steel girder structure
+      ctx.fillStyle = '#1c212b';
+      ctx.fillRect(x, y, width, height);
+
+      // Steel vertical support columns (left, center, right)
+      ctx.fillStyle = '#2d3545';
+      ctx.fillRect(x + 2, y, 7, height);
+      ctx.fillRect(x + width / 2 - 3.5, y, 7, height);
+      ctx.fillRect(x + width - 9, y, 7, height);
+
+      // High-tech internal lattice cross-bracing (X-trusses)
+      ctx.strokeStyle = '#3d485e';
+      ctx.lineWidth = 2.2;
+      const trussStep = 34;
+      const numSteps = Math.ceil(height / trussStep);
+
+      for (let i = 0; i < numSteps; i++) {
+        const sy = y + i * trussStep;
+        const ey = Math.min(y + height, sy + trussStep);
+
+        // Horizontal steel crossbar
+        ctx.beginPath();
+        ctx.moveTo(x + 2, sy);
+        ctx.lineTo(x + width - 2, sy);
+        ctx.stroke();
+
+        // Diagonal X cross struts
+        ctx.beginPath();
+        ctx.moveTo(x + 4, sy);
+        ctx.lineTo(x + width - 4, ey);
+        ctx.moveTo(x + width - 4, sy);
+        ctx.lineTo(x + 4, ey);
+        ctx.stroke();
+      }
+
+      // Tower tip collision bumper facing the flight corridor
+      const bumperH = 14;
+      const bumperY = isUpper ? y + height - bumperH : y;
+
+      // Heavy industrial bumper head
+      ctx.fillStyle = '#141820';
+      ctx.fillRect(x - 2, bumperY, width + 4, bumperH);
+
+      // Alternating yellow/black caution hazard stripes on bumper head
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x - 2, bumperY, width + 4, bumperH);
+      ctx.clip();
+      ctx.fillStyle = '#f1c40f';
+      const stripeW = 9;
+      for (let sx = -stripeW * 2; sx < width + stripeW * 4; sx += stripeW * 2) {
+        ctx.beginPath();
+        ctx.moveTo(x + sx, bumperY);
+        ctx.lineTo(x + sx + stripeW, bumperY);
+        ctx.lineTo(x + sx, bumperY + bumperH);
+        ctx.lineTo(x + sx - stripeW, bumperY + bumperH);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Aviation warning band (SpaceX red & white launch tower markings)
+      const bandY = isUpper ? y + height - 36 : y + 16;
+      if (height > 45) {
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x, bandY, width, 10);
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(x, bandY + 10, width, 10);
+      }
+
+      // Red aircraft warning strobe LED beacon on tower tip
+      const beaconX = isUpper ? x + 6 : x + width - 6;
+      const beaconY = isUpper ? y + height - 2 : y + 2;
+
+      ctx.fillStyle = isStrobeOn ? '#ff2a2a' : '#5a1010';
+      if (isStrobeOn) {
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 10;
+      }
+      ctx.beginPath();
+      ctx.arc(beaconX, beaconY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0; // Reset shadow
+
+      ctx.restore();
+    }
+  }
+
+  // ============================================================================
+  // 7. BACKGROUND & PARALLAX SCENERY
+  // Texas desert dusk (Starbase Boca Chica vibe): gradient sky, twinkling stars,
+  // distant mesa silhouettes, Starbase horizon with Starship easter egg silhouette.
+  // ============================================================================
+  class Background {
+    constructor() {
+      this.stars = [];
+      this.mesaOffset = 0;
+      this.starbaseOffset = 0;
+      this.groundOffset = 0;
+
+      // Seed 60 twinkling stars in the upper sky
+      for (let i = 0; i < 60; i++) {
+        this.stars.push({
+          x: Math.random() * CONSTANTS.VIRTUAL_WIDTH,
+          y: Math.random() * (CONSTANTS.VIRTUAL_HEIGHT * 0.45),
+          size: Math.random() * 1.5 + 0.6,
+          baseAlpha: Math.random() * 0.5 + 0.35,
+          twinkleSpeed: Math.random() * 2.5 + 1.2,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    update(dt, isPlaying) {
+      const speed = isPlaying ? CONSTANTS.SCROLL_SPEED : CONSTANTS.SCROLL_SPEED * 0.35;
+
+      // Parallax scroll rates
+      this.mesaOffset = (this.mesaOffset + speed * 0.08 * dt) % CONSTANTS.VIRTUAL_WIDTH;
+      this.starbaseOffset = (this.starbaseOffset + speed * 0.22 * dt) % CONSTANTS.VIRTUAL_WIDTH;
+      this.groundOffset = (this.groundOffset + speed * dt) % 60;
+    }
+
+    render(ctx, time) {
+      const W = CONSTANTS.VIRTUAL_WIDTH;
+      const H = CONSTANTS.VIRTUAL_HEIGHT;
+      const groundY = H - CONSTANTS.GROUND_HEIGHT;
+
+      // 1. Rich Texas Desert Dusk Sky Gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+      skyGrad.addColorStop(0.00, '#0a0818'); // Deep cosmic indigo twilight
+      skyGrad.addColorStop(0.35, '#22112e'); // Dusk purple
+      skyGrad.addColorStop(0.65, '#5c1b3c'); // Magenta dusk
+      skyGrad.addColorStop(0.85, '#99393a'); // Coral dusk
+      skyGrad.addColorStop(0.96, '#dd6b33'); // Texas sunset amber
+      skyGrad.addColorStop(1.00, '#f5a452'); // Golden horizon glow
+
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, W, groundY);
+
+      // 2. Procedural Twinkling Stars in Upper Sky
+      for (const star of this.stars) {
+        const alpha = star.baseAlpha + Math.sin(time * star.twinkleSpeed + star.phase) * 0.25;
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, alpha)})`;
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      }
+
+      // 3. Layer 1: Distant Texas Mesas Silhouette (0.08x scroll)
+      ctx.save();
+      ctx.fillStyle = '#3a1835';
+      this.drawMesaLayer(ctx, this.mesaOffset, groundY - 48, W);
+      ctx.restore();
+
+      // 4. Layer 2: Starbase Boca Chica Industrial Horizon (0.22x scroll)
+      ctx.save();
+      ctx.fillStyle = '#201227';
+      this.drawStarbaseHorizon(ctx, this.starbaseOffset, groundY, W, time);
+      ctx.restore();
+
+      // 5. Foreground Desert Ground & Starbase Launch Pad Tarmac (1.0x scroll)
+      this.drawGround(ctx, groundY, W, CONSTANTS.GROUND_HEIGHT);
+    }
+
+    drawMesaLayer(ctx, offset, baseY, W) {
+      // Repeat twice to wrap seamlessly
+      for (let s = -1; s <= 1; s++) {
+        const ox = s * W - offset;
+        ctx.beginPath();
+        ctx.moveTo(ox, baseY + 60);
+        ctx.lineTo(ox, baseY - 12);
+        ctx.lineTo(ox + 90, baseY - 14);
+        ctx.lineTo(ox + 160, baseY + 4);
+        ctx.lineTo(ox + 250, baseY - 24);
+        ctx.lineTo(ox + 380, baseY - 26);
+        ctx.lineTo(ox + 460, baseY + 8);
+        ctx.lineTo(ox + 570, baseY - 8);
+        ctx.lineTo(ox + 690, baseY - 30);
+        ctx.lineTo(ox + 820, baseY - 32);
+        ctx.lineTo(ox + 910, baseY + 2);
+        ctx.lineTo(ox + W, baseY - 10);
+        ctx.lineTo(ox + W, baseY + 60);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    drawStarbaseHorizon(ctx, offset, groundY, W, time) {
+      for (let s = -1; s <= 1; s++) {
+        const ox = s * W - offset;
+
+        // Giant High Bay / Mega Bay assembly buildings
+        ctx.fillRect(ox + 110, groundY - 78, 68, 78);
+        ctx.fillRect(ox + 185, groundY - 95, 76, 95);
+
+        // Crawler crane silhouette
+        ctx.beginPath();
+        ctx.moveTo(ox + 300, groundY);
+        ctx.lineTo(ox + 350, groundY - 105);
+        ctx.lineTo(ox + 353, groundY - 105);
+        ctx.lineTo(ox + 325, groundY);
+        ctx.fill();
+
+        // Starbase orbital tank farm (spherical LOX/methane cryo tanks)
+        ctx.beginPath();
+        ctx.arc(ox + 430, groundY - 18, 22, Math.PI, 0, false);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ox + 475, groundY - 16, 18, Math.PI, 0, false);
+        ctx.fill();
+
+        // ----------------------------------------------------------------------
+        // EASTER EGG: Starship & Super Heavy stack standing on the launch mount!
+        // Distinctive aerodynamic stainless-steel silhouette with forward/aft flaps
+        // ----------------------------------------------------------------------
+        const shipX = ox + 680;
+        const shipW = 16;
+        const boosterH = 65;
+        const shipH = 46;
+        const totalH = boosterH + shipH;
+        const topY = groundY - totalH;
+
+        // Super Heavy Booster
+        ctx.fillRect(shipX, groundY - boosterH, shipW, boosterH);
+
+        // Starship upper stage
+        ctx.fillRect(shipX, topY + 12, shipW, shipH - 12);
+        // Aerodynamic conical nosecone
+        ctx.beginPath();
+        ctx.moveTo(shipX, topY + 12);
+        ctx.lineTo(shipX + shipW / 2, topY);
+        ctx.lineTo(shipX + shipW, topY + 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Forward flaps (fins)
+        ctx.fillRect(shipX - 4, topY + 14, 4, 8);
+        ctx.fillRect(shipX + shipW, topY + 14, 4, 8);
+
+        // Aft flaps (fins)
+        ctx.fillRect(shipX - 6, groundY - boosterH + 2, 6, 16);
+        ctx.fillRect(shipX + shipW, groundY - boosterH + 2, 6, 16);
+
+        // Flashing FAA aviation beacon on the tip of Starship
+        const beaconOn = Math.sin(time * 4.0) > 0.1;
+        ctx.fillStyle = beaconOn ? '#ff3333' : '#300808';
+        ctx.beginPath();
+        ctx.arc(shipX + shipW / 2, topY - 1, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#201227'; // Restore silhouette color
+      }
+    }
+
+    drawGround(ctx, groundY, W, groundHeight) {
+      ctx.save();
+
+      // Top ground curb / asphalt edge
+      ctx.fillStyle = '#1e1c24';
+      ctx.fillRect(0, groundY, W, groundHeight);
+
+      // Starbase concrete pad expansion slab joints
+      ctx.strokeStyle = '#2d2b38';
+      ctx.lineWidth = 2;
+      for (let x = -this.groundOffset; x < W + 60; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x, groundY + groundHeight);
+        ctx.stroke();
+      }
+
+      // Yellow launch taxiway dashed stripe
+      ctx.fillStyle = '#e5a522';
+      const dashW = 34;
+      const dashGap = 26;
+      const totalDash = dashW + dashGap;
+      const shiftX = this.groundOffset % totalDash;
+
+      for (let x = -shiftX; x < W + totalDash; x += totalDash) {
+        ctx.fillRect(x, groundY + 12, dashW, 3.5);
+      }
+
+      // Sandy Texas desert shoulder along bottom
+      ctx.fillStyle = '#15131a';
+      ctx.fillRect(0, groundY + groundHeight - 14, W, 14);
+
+      ctx.restore();
+    }
+  }
+
+  // ============================================================================
+  // 8. GAME ENGINE & STATE MACHINE
+  // Game states: TITLE -> PLAYING -> GAMEOVER
+  // High score tracking via localStorage, delta-time game loop, HiDPI canvas.
+  // ============================================================================
+  class Game {
+    constructor() {
+      this.canvas = document.getElementById('gameCanvas');
+      this.ctx = this.canvas.getContext('2d');
+
+      this.input = new InputHandler();
+      this.audio = new SoundManager();
+      this.particles = new ParticleSystem();
+      this.roadster = new Roadster(220, 260);
+      this.obstacles = new ObstacleManager();
+      this.background = new Background();
+
+      // Game state
+      this.state = 'TITLE'; // 'TITLE' | 'PLAYING' | 'GAMEOVER'
+      this.score = 0;
+      this.highScore = this.loadHighScore();
+      this.isNewHighScore = false;
+      this.gameOverTimer = 0;
+
+      // Timing
+      this.lastTime = performance.now();
+      this.totalTime = 0;
+
+      // Handle window resizing and retina scaling
+      this.resizeCanvas();
+      window.addEventListener('resize', () => this.resizeCanvas());
+
+      // Start delta-time game loop
+      requestAnimationFrame((t) => this.loop(t));
+    }
+
+    loadHighScore() {
+      try {
+        const val = localStorage.getItem('flappy_tesla_highscore');
+        return val ? parseInt(val, 10) || 0 : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    saveHighScore(score) {
+      try {
+        localStorage.setItem('flappy_tesla_highscore', score.toString());
+      } catch (e) {}
+    }
+
+    resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+
+      // Fit virtual 16:9 box into available window while preserving aspect ratio
+      const aspect = CONSTANTS.VIRTUAL_WIDTH / CONSTANTS.VIRTUAL_HEIGHT;
+      let displayW = winW;
+      let displayH = winW / aspect;
+
+      if (displayH > winH) {
+        displayH = winH;
+        displayW = winH * aspect;
+      }
+
+      // Canvas element style size
+      this.canvas.style.width = `${Math.floor(displayW)}px`;
+      this.canvas.style.height = `${Math.floor(displayH)}px`;
+
+      // Buffer size multiplied by DPR for razor-sharp HiDPI / Retina rendering
+      this.canvas.width = Math.floor(CONSTANTS.VIRTUAL_WIDTH * dpr);
+      this.canvas.height = Math.floor(CONSTANTS.VIRTUAL_HEIGHT * dpr);
+
+      this.dpr = dpr;
+    }
+
+    startGame() {
+      this.audio.resume();
+      this.state = 'PLAYING';
+      this.score = 0;
+      this.isNewHighScore = false;
+      this.gameOverTimer = 0;
+      this.roadster.reset();
+      this.obstacles.reset();
+      this.particles.reset();
+    }
+
+    triggerGameOver() {
+      this.state = 'GAMEOVER';
+      this.roadster.alive = false;
+      this.gameOverTimer = 0;
+
+      // Play synthesized crash audio
+      this.audio.playCrash();
+
+      // Trigger visual explosion debris and vapor
+      this.particles.emitCrashExplosion(this.roadster.x, this.roadster.y);
+
+      // Check high score
+      if (this.score > this.highScore) {
+        this.highScore = this.score;
+        this.isNewHighScore = true;
+        this.saveHighScore(this.highScore);
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // UPDATE CYCLE
+    // --------------------------------------------------------------------------
+    update(dt) {
+      this.totalTime += dt;
+
+      // Audio mute toggle via M key
+      if (this.input.muteToggled) {
+        this.audio.toggleMute();
+      }
+
+      // State machine logic
+      if (this.state === 'TITLE') {
+        this.background.update(dt, false);
+        this.roadster.update(dt, false, false, this.particles, false);
+        this.particles.update(dt);
+
+        // Start game on space or click
+        if (this.input.anyKeyJustPressed || this.input.thrustJustPressed) {
+          this.startGame();
+        }
+      } else if (this.state === 'PLAYING') {
+        // Continuous thruster audio control
+        this.audio.setThrusterActive(this.input.isThrusting, this.input.thrustJustPressed);
+
+        this.background.update(dt, true);
+        this.roadster.update(dt, this.input.isThrusting, this.input.thrustJustPressed, this.particles, true);
+        this.obstacles.update(dt, true, () => {
+          this.score++;
+          if (this.score > this.highScore) {
+            this.highScore = this.score;
+            this.isNewHighScore = true;
+            this.saveHighScore(this.highScore);
+          }
+          this.audio.playScorePing();
+        });
+        this.particles.update(dt);
+
+        // Collision check
+        if (this.obstacles.checkCollision(this.roadster.getHitbox())) {
+          this.triggerGameOver();
+        }
+      } else if (this.state === 'GAMEOVER') {
+        this.gameOverTimer += dt;
+        this.audio.setThrusterActive(false);
+
+        this.background.update(dt, false);
+        this.particles.update(dt);
+
+        // Restart on space / click after brief lock delay (0.4s to prevent accidental skip)
+        if (this.gameOverTimer > 0.45 && (this.input.anyKeyJustPressed || this.input.thrustJustPressed)) {
+          this.startGame();
+        }
+      }
+
+      this.input.endFrame();
+    }
+
+    // --------------------------------------------------------------------------
+    // RENDER CYCLE
+    // --------------------------------------------------------------------------
+    render() {
+      const ctx = this.ctx;
+      const dpr = this.dpr || 1;
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // Camera shake translation
+      if (this.particles.cameraShake > 0.1) {
+        const shakeMag = this.particles.cameraShake;
+        const ox = (Math.random() - 0.5) * shakeMag;
+        const oy = (Math.random() - 0.5) * shakeMag;
+        ctx.translate(ox, oy);
+      } else if (this.state === 'PLAYING' && this.input.isThrusting) {
+        // Subtle flight rumble while thrusters are firing
+        const microOx = (Math.random() - 0.5) * 1.5;
+        const microOy = (Math.random() - 0.5) * 1.5;
+        ctx.translate(microOx, microOy);
+      }
+
+      // 1. Parallax background
+      this.background.render(ctx, this.totalTime);
+
+      // Ceiling flight ceiling warning boundary
+      ctx.save();
+      ctx.strokeStyle = 'rgba(231, 76, 60, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(0, CONSTANTS.CEILING_HEIGHT);
+      ctx.lineTo(CONSTANTS.VIRTUAL_WIDTH, CONSTANTS.CEILING_HEIGHT);
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Obstacles (Starbase towers)
+      this.obstacles.render(ctx);
+
+      // 3. Particles & Thruster plumes (rendered underneath the car sprite)
+      this.particles.render(ctx);
+
+      // 4. Roadster sprite
+      this.roadster.render(ctx);
+
+      // 5. Dynamic screen vignette pulse during cold-gas thruster firing
+      if (this.state === 'PLAYING' && this.roadster.thrustOutput > 0.05) {
+        ctx.save();
+        const vigGrad = ctx.createRadialGradient(
+          CONSTANTS.VIRTUAL_WIDTH / 2, CONSTANTS.VIRTUAL_HEIGHT / 2, CONSTANTS.VIRTUAL_HEIGHT * 0.35,
+          CONSTANTS.VIRTUAL_WIDTH / 2, CONSTANTS.VIRTUAL_HEIGHT / 2, CONSTANTS.VIRTUAL_WIDTH * 0.75
+        );
+        vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vigGrad.addColorStop(1, `rgba(0, 180, 255, ${this.roadster.thrustOutput * 0.18})`);
+        ctx.fillStyle = vigGrad;
+        ctx.fillRect(0, 0, CONSTANTS.VIRTUAL_WIDTH, CONSTANTS.VIRTUAL_HEIGHT);
+        ctx.restore();
+      }
+
+      // 6. HUD and UI overlays
+      this.renderUI(ctx);
+
+      ctx.restore();
+    }
+
+    // --------------------------------------------------------------------------
+    // UI & TEXT RENDERING
+    // Title screen, HUD, Flight Termination game over dialog
+    // --------------------------------------------------------------------------
+    renderUI(ctx) {
+      const W = CONSTANTS.VIRTUAL_WIDTH;
+      const H = CONSTANTS.VIRTUAL_HEIGHT;
+
+      // Audio Mute Status (top right)
+      ctx.save();
+      ctx.font = '600 12px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillStyle = this.audio.isMuted ? '#ff5252' : '#81ecec';
+      ctx.fillText(this.audio.isMuted ? '[M] AUDIO: MUTED' : '[M] AUDIO: ON', W - 18, 26);
+      ctx.restore();
+
+      if (this.state === 'TITLE') {
+        // Title Screen Banner
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        // Title glow
+        ctx.shadowColor = '#e74c3c';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 48px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillText('FLAPPY TESLA', W / 2, 108);
+
+        ctx.shadowColor = '#00d2d3';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#00d2d3';
+        ctx.font = '700 13px monospace';
+        ctx.letterSpacing = '3px';
+        ctx.fillText('SPACEX COLD-GAS THRUSTER FLIGHT TEST', W / 2, 138);
+        ctx.shadowBlur = 0;
+
+        // Action instructions box (placed neatly under the hovering Roadster)
+        ctx.fillStyle = 'rgba(15, 17, 26, 0.82)';
+        ctx.strokeStyle = '#00d2d3';
+        ctx.lineWidth = 1.2;
+        const boxW = 420;
+        const boxH = 80;
+        const boxY = 265;
+        ctx.beginPath();
+        ctx.roundRect(W / 2 - boxW / 2, boxY, boxW, boxH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Pulsing prompt
+        const pulse = Math.sin(this.totalTime * 4.5) * 0.25 + 0.75;
+        ctx.fillStyle = `rgba(255, 255, 255, ${pulse})`;
+        ctx.font = '700 17px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('HOLD [SPACE] OR TOUCH & HOLD TO FLY', W / 2, boxY + 34);
+
+        ctx.fillStyle = '#a4b0be';
+        ctx.font = '500 12px monospace';
+        ctx.fillText('RELEASE = GRAVITY   •   PASS STARBASE TOWERS', W / 2, boxY + 60);
+
+        // High Score
+        if (this.highScore > 0) {
+          ctx.fillStyle = '#ffd32a';
+          ctx.font = '700 14px monospace';
+          ctx.fillText(`★ BEST RECORD: ${this.highScore} ★`, W / 2, 382);
+        }
+
+        ctx.restore();
+      } else if (this.state === 'PLAYING') {
+        // Active Score in top center
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.font = '900 48px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillText(this.score, W / 2 + 2, 62);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(this.score, W / 2, 60);
+
+        // Thruster status bar indicator in top-left
+        ctx.textAlign = 'left';
+        ctx.font = '700 11px monospace';
+        ctx.fillStyle = '#747d8c';
+        ctx.fillText('COLD-GAS THRUST', 20, 24);
+
+        // Thruster power gauge bar
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(20, 30, 110, 8);
+        const gaugeW = 110 * this.roadster.thrustOutput;
+        const barGrad = ctx.createLinearGradient(20, 0, 130, 0);
+        barGrad.addColorStop(0, '#00d2d3');
+        barGrad.addColorStop(1, '#ffffff');
+        ctx.fillStyle = barGrad;
+        ctx.fillRect(20, 30, gaugeW, 8);
+        ctx.strokeStyle = '#2f3542';
+        ctx.strokeRect(20, 30, 110, 8);
+
+        ctx.restore();
+      } else if (this.state === 'GAMEOVER') {
+        // Game Over Panel
+        ctx.save();
+        ctx.textAlign = 'center';
+
+        const panelW = 340;
+        const panelH = 210;
+        const panelX = W / 2 - panelW / 2;
+        const panelY = H / 2 - panelH / 2 - 15;
+
+        // Panel background
+        ctx.fillStyle = 'rgba(16, 17, 24, 0.92)';
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Panel header
+        ctx.fillStyle = '#e74c3c';
+        ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.letterSpacing = '1px';
+        ctx.fillText('FLIGHT TERMINATED', W / 2, panelY + 38);
+
+        // Score row
+        ctx.fillStyle = '#a4b0be';
+        ctx.font = '600 13px monospace';
+        ctx.fillText('FINAL SCORE', W / 2, panelY + 70);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 38px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(this.score, W / 2, panelY + 110);
+
+        // Best score & New High Score badge
+        ctx.font = '700 13px monospace';
+        if (this.isNewHighScore) {
+          ctx.fillStyle = '#2ed573';
+          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, W / 2, panelY + 138);
+        } else {
+          ctx.fillStyle = '#ffd32a';
+          ctx.fillText(`BEST RECORD: ${this.highScore}`, W / 2, panelY + 138);
+        }
+
+        // Restart prompt
+        const promptPulse = Math.sin(this.totalTime * 5.0) * 0.3 + 0.7;
+        ctx.fillStyle = `rgba(255, 255, 255, ${promptPulse})`;
+        ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', W / 2, panelY + 182);
+
+        ctx.restore();
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // MAIN LOOP (Delta-time based)
+    // --------------------------------------------------------------------------
+    loop(timestamp) {
+      const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1); // Clamp dt to prevent tunneling
+      this.lastTime = timestamp;
+
+      this.update(dt);
+      this.render();
+
+      requestAnimationFrame((t) => this.loop(t));
+    }
+  }
+
+  // ============================================================================
+  // 9. BOOTSTRAP
+  // ============================================================================
+  window.addEventListener('DOMContentLoaded', () => {
+    window.game = new Game();
+  });
+  </script>
+</body>
+</html>
