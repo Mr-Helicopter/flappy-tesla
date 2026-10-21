@@ -76,9 +76,7 @@
     BASE_SCROLL_SPEED: 200,       // Starting horizontal world scroll speed (km/h and pixels/sec)
     SCROLL_SPEED: 200,            // Reference base scroll speed
     SPEED_INCREASE_INTERVAL: 5,   // Increase speed every N points passed
-    SPEED_STEP: 25,               // +25 km/h added every 5 points
-    MAX_LEVEL: 10,                // Total levels (10 Levels: Level 1 to Level 10)
-    MAX_SCROLL_SPEED: 425,        // Top speed cap (425 km/h reached at Level 10)
+    SPEED_STEP: 25,               // +25 km/h added every 5 points indefinitely (no top speed limit!)
     PIPE_GAP: 165,            // Vertical clearance gap between upper & lower Starbase towers
     PIPE_WIDTH: 74,           // Width of the Starbase launch tower pillars
     PIPE_SPAWN_INTERVAL: 1.95,// Seconds between new tower pair spawns at base speed
@@ -1580,20 +1578,14 @@
       requestAnimationFrame((t) => this.loop(t));
     }
 
-    // Dynamic scroll speed calculation: increases by 25 km/h every 5 points passed
+    // Dynamic scroll speed calculation: increases by 25 km/h every 5 points passed indefinitely
     getScrollSpeed() {
       const levelIdx = this.getSpeedLevel() - 1;
-      return Math.min(
-        CONSTANTS.MAX_SCROLL_SPEED,
-        CONSTANTS.BASE_SCROLL_SPEED + levelIdx * CONSTANTS.SPEED_STEP
-      );
+      return CONSTANTS.BASE_SCROLL_SPEED + levelIdx * CONSTANTS.SPEED_STEP;
     }
 
     getSpeedLevel() {
-      return Math.min(
-        CONSTANTS.MAX_LEVEL,
-        Math.floor(this.score / CONSTANTS.SPEED_INCREASE_INTERVAL) + 1
-      );
+      return Math.floor(this.score / CONSTANTS.SPEED_INCREASE_INTERVAL) + 1;
     }
 
     loadHighScore() {
@@ -1710,16 +1702,12 @@
             this.saveHighScore(this.highScore);
           }
 
-          // Every 5 points: increase game speed with celebratory chime & HUD banner
+          // Every 5 points: increase game speed with celebratory chime & HUD banner (indefinite scaling)
           if (this.score % CONSTANTS.SPEED_INCREASE_INTERVAL === 0) {
             const nextLvl = this.getSpeedLevel();
             const nextSpeed = this.getScrollSpeed();
             this.speedBannerTimer = 1.8;
-            if (nextLvl >= CONSTANTS.MAX_LEVEL) {
-              this.speedBannerText = `⚡ MAX SPEED REACHED! ${nextSpeed} KM/H (LVL ${nextLvl}) ⚡`;
-            } else {
-              this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} KM/H)`;
-            }
+            this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} KM/H)`;
             this.audio.playSpeedUpPing();
           } else {
             this.audio.playScorePing();
@@ -1907,13 +1895,12 @@
         ctx.strokeStyle = '#2f3542';
         ctx.strokeRect(20, 30, 110, 8);
 
-        // Speed & Level HUD indicator in km/h
+        // Speed & Level HUD indicator in km/h (increases indefinitely)
         const curSpeed = this.getScrollSpeed();
         const curLvl = this.getSpeedLevel();
-        const lvlStr = curLvl >= CONSTANTS.MAX_LEVEL ? 'MAX LVL' : `LVL ${curLvl}`;
         ctx.fillStyle = '#00d2d3';
         ctx.font = '700 11px monospace';
-        ctx.fillText(`SPEED: ${curSpeed} KM/H  [${lvlStr}]`, 20, 52);
+        ctx.fillText(`SPEED: ${curSpeed} KM/H  [LVL ${curLvl}]`, 20, 52);
 
         // Floating Speed Increase alert notification
         if (this.speedBannerTimer > 0) {
