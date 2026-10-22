@@ -450,6 +450,330 @@
       border-radius: 10px;
       font-family: monospace;
     }
+
+    /* Title Bar Right Buttons Group */
+    .title-right-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .coin-hud-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(13, 16, 24, 0.88);
+      border: 1px solid rgba(241, 196, 15, 0.5);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffd32a;
+      box-shadow: 0 0 10px rgba(241, 196, 15, 0.2);
+      backdrop-filter: blur(4px);
+      user-select: none;
+    }
+    .coin-icon {
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    /* Car Shop Modal & Carousel Styling */
+    .shop-modal-card {
+      max-width: 520px;
+      width: 92vw;
+      padding: 22px 26px;
+      background: rgba(12, 14, 22, 0.96);
+      border: 1.5px solid #00d2d3;
+      border-radius: 14px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 210, 211, 0.25);
+      backdrop-filter: blur(8px);
+    }
+    .shop-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .shop-coin-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(241, 196, 15, 0.12);
+      border: 1px solid rgba(241, 196, 15, 0.45);
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffd32a;
+      user-select: none;
+    }
+    .shop-carousel-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 0 10px 0;
+    }
+    .shop-nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(18, 22, 36, 0.85);
+      border: 1.5px solid rgba(0, 210, 211, 0.45);
+      color: #00d2d3;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .shop-nav-btn:hover {
+      background: rgba(0, 210, 211, 0.25);
+      border-color: #00d2d3;
+      box-shadow: 0 0 15px rgba(0, 210, 211, 0.5);
+      transform: scale(1.08);
+    }
+    .shop-nav-btn:active {
+      transform: scale(0.96);
+    }
+    .shop-card-wrapper {
+      flex: 1;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+    .shop-car-card {
+      background: rgba(18, 22, 34, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+    .shop-card-top {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 24px;
+      margin-bottom: 6px;
+    }
+    .status-pill {
+      font-family: monospace;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+    .status-pill.equipped {
+      background: rgba(0, 210, 211, 0.18);
+      border: 1px solid #00d2d3;
+      color: #00d2d3;
+      box-shadow: 0 0 8px rgba(0, 210, 211, 0.3);
+    }
+    .status-pill.owned {
+      background: rgba(46, 213, 115, 0.15);
+      border: 1px solid #2ed573;
+      color: #2ed573;
+    }
+    .status-pill.locked {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #a4b0be;
+    }
+    .new-sparkle-badge {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 900;
+      color: #ffd32a;
+      background: rgba(241, 196, 15, 0.2);
+      border: 1px solid #ffd32a;
+      padding: 2px 8px;
+      border-radius: 10px;
+      animation: sparklePulse 0.8s infinite alternate ease-in-out;
+    }
+    @keyframes sparklePulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 5px rgba(241, 196, 15, 0.4); }
+      100% { transform: scale(1.08); box-shadow: 0 0 16px rgba(241, 196, 15, 0.85); }
+    }
+    .shop-preview-stage {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      background: radial-gradient(circle at center, rgba(30, 39, 60, 0.45) 0%, rgba(10, 12, 18, 0.7) 80%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+    #shop-preview-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .shop-lock-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(8, 10, 16, 0.65);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      backdrop-filter: blur(1.5px);
+      user-select: none;
+    }
+    .lock-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.8));
+    }
+    .lock-price {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffd32a;
+      letter-spacing: 1px;
+    }
+    .shop-car-meta {
+      margin-bottom: 12px;
+    }
+    .shop-car-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: #ffffff;
+      margin-bottom: 3px;
+    }
+    .shop-car-subtitle {
+      font-size: 11px;
+      font-family: monospace;
+      color: #a4b0be;
+      margin-bottom: 6px;
+    }
+    .shop-car-price-tag {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffd32a;
+    }
+    .shop-action-box {
+      width: 100%;
+      max-width: 280px;
+    }
+    .btn-shop-action {
+      width: 100%;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      outline: none;
+    }
+    .btn-shop-buy {
+      background: linear-gradient(135deg, #00d2d3 0%, #0984e3 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(0, 210, 211, 0.35);
+    }
+    .btn-shop-buy:hover {
+      box-shadow: 0 6px 20px rgba(0, 210, 211, 0.6);
+      transform: translateY(-1px);
+    }
+    .btn-shop-confirm {
+      background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(243, 156, 18, 0.4);
+      animation: confirmPulse 0.7s infinite alternate ease-in-out;
+    }
+    @keyframes confirmPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.02); box-shadow: 0 0 16px rgba(243, 156, 18, 0.8); }
+    }
+    .btn-shop-equip {
+      background: linear-gradient(135deg, #2ed573 0%, #10ac84 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(46, 213, 115, 0.35);
+    }
+    .btn-shop-equip:hover {
+      box-shadow: 0 6px 20px rgba(46, 213, 115, 0.6);
+      transform: translateY(-1px);
+    }
+    .btn-shop-equipped {
+      background: rgba(0, 210, 211, 0.12);
+      border: 1.5px solid rgba(0, 210, 211, 0.6);
+      color: #00d2d3;
+      cursor: default;
+    }
+    .btn-shop-locked {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #747d8c;
+      cursor: not-allowed;
+    }
+    .shop-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 10px 0 6px 0;
+    }
+    .shop-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .shop-dot.active {
+      width: 22px;
+      border-radius: 6px;
+      background: #00d2d3;
+      border-color: #00d2d3;
+      box-shadow: 0 0 10px rgba(0, 210, 211, 0.6);
+    }
+    .shop-hint {
+      text-align: center;
+      font-size: 11px;
+      color: #747d8c;
+      font-family: monospace;
+      margin-top: 6px;
+    }
+    @keyframes slideInFromRight {
+      0% { opacity: 0; transform: translateX(32px) scale(0.96); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes slideInFromLeft {
+      0% { opacity: 0; transform: translateX(-32px) scale(0.96); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    .slide-next {
+      animation: slideInFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .slide-prev {
+      animation: slideInFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
   </style>
 </head>
 <body>
@@ -465,9 +789,18 @@
           <span id="pilot-name-display" class="pilot-name">STARMAN</span>
           <button id="change-name-btn" class="btn-link" type="button">Change name</button>
         </div>
-        <button id="open-leaderboard-btn" class="btn-hud" type="button">
-          <span>🏆</span> LEADERBOARD
-        </button>
+        <div class="title-right-group">
+          <div id="title-coin-badge" class="coin-hud-badge" title="Coin Balance">
+            <span class="coin-icon">🪙</span>
+            <span id="title-coin-display">0</span>
+          </div>
+          <button id="open-shop-btn" class="btn-hud" type="button">
+            <span>🚗</span> CAR SHOP
+          </button>
+          <button id="open-leaderboard-btn" class="btn-hud" type="button">
+            <span>🏆</span> LEADERBOARD
+          </button>
+        </div>
       </div>
 
       <!-- Name Entry Modal (First load or change name) -->
@@ -501,6 +834,66 @@
           </div>
         </div>
       </div>
+
+      <!-- Car Shop Modal Overlay (Single-car Carousel Showcase) -->
+      <div id="shop-modal" class="modal-overlay">
+        <div class="modal-card shop-modal-card">
+          <div class="modal-header">
+            <div>
+              <div class="modal-tag">STARBASE VEHICLE HANGAR</div>
+              <h2 class="modal-title">CAR SHOP</h2>
+            </div>
+            <div class="shop-header-right">
+              <div class="shop-coin-pill">
+                <span class="coin-icon">🪙</span>
+                <span id="shop-coins-val">0</span> COINS
+              </div>
+              <button id="close-shop-btn" class="btn-close" type="button" title="Close [ESC]">✕</button>
+            </div>
+          </div>
+
+          <!-- Single Car Carousel Showcase -->
+          <div class="shop-carousel-container">
+            <button id="shop-prev-btn" class="shop-nav-btn" type="button" aria-label="Previous Car">‹</button>
+
+            <div class="shop-card-wrapper">
+              <div id="shop-car-card" class="shop-car-card">
+                <div class="shop-card-top">
+                  <span id="shop-car-status-pill" class="status-pill equipped">EQUIPPED</span>
+                  <span id="shop-new-badge" class="new-sparkle-badge" style="display: none;">✨ NEW!</span>
+                </div>
+
+                <div class="shop-preview-stage">
+                  <canvas id="shop-preview-canvas" width="340" height="140"></canvas>
+                  <div id="shop-lock-overlay" class="shop-lock-overlay" style="display: none;">
+                    <span class="lock-icon">🔒</span>
+                    <span id="shop-lock-price" class="lock-price">50 🪙</span>
+                  </div>
+                </div>
+
+                <div class="shop-car-meta">
+                  <h3 id="shop-car-name" class="shop-car-name">TESLA ROADSTER</h3>
+                  <div id="shop-car-subtitle" class="shop-car-subtitle">SpaceX Cold-Gas Flight Package</div>
+                  <div id="shop-car-price-tag" class="shop-car-price-tag">FREE (DEFAULT)</div>
+                </div>
+
+                <div class="shop-action-box">
+                  <button id="shop-action-btn" class="btn-shop-action btn-shop-equipped" type="button">EQUIPPED</button>
+                </div>
+              </div>
+            </div>
+
+            <button id="shop-next-btn" class="shop-nav-btn" type="button" aria-label="Next Car">›</button>
+          </div>
+
+          <div id="shop-carousel-dots" class="shop-dots"></div>
+
+          <div class="shop-hint">
+            <span>Use <b>‹</b> and <b>›</b> arrow keys to browse &bull; Space to act &bull; ESC to exit</span>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Game Over Integrated Leaderboard Panel -->
       <div id="gameover-leaderboard-panel" class="ui-panel">
@@ -801,6 +1194,169 @@
   // 1. TUNING CONSTANTS
   // Edit these parameters to tune the flight physics, gameplay, and obstacles.
   // ============================================================================
+
+  // ============================================================================
+  // CAR DEFINITIONS (COSMETIC ONLY - EXACT SAME HITBOX, PHYSICS & SPEED)
+  // Edit prices and visual parameters easily below:
+  // ============================================================================
+  const CARS = [
+    {
+      id: 'roadster',
+      name: 'Tesla Roadster',
+      subtitle: 'SpaceX Cold-Gas Flight Package',
+      price: 0,
+      colorName: 'Metallic Red',
+      type: 'roadster',
+      underNozzle: { x: -4, y: 8, angleOffset: 0.12 },
+      rearNozzle: { x: -33, y: 4, angleOffset: 0.22 },
+      spoilerOffset: { x: -31, y: -7 },
+      wheelXFront: 19,
+      wheelXRear: -20,
+      wheelY: 6.5
+    },
+    {
+      id: 'suv',
+      name: 'Grey Cyber SUV',
+      subtitle: 'Heavy-Duty Exploration Rig',
+      price: 50,
+      colorName: 'Stealth Grey',
+      type: 'suv',
+      underNozzle: { x: -3, y: 8, angleOffset: 0.12 },
+      rearNozzle: { x: -33, y: 4, angleOffset: 0.20 },
+      spoilerOffset: { x: -30, y: -10 },
+      wheelXFront: 19,
+      wheelXRear: -20,
+      wheelY: 6.5
+    },
+    {
+      id: 'minivan',
+      name: 'White Minivan',
+      subtitle: 'Aero Family Shuttle Pod',
+      price: 120,
+      colorName: 'Pearl White',
+      type: 'minivan',
+      underNozzle: { x: -3, y: 8, angleOffset: 0.12 },
+      rearNozzle: { x: -33, y: 4, angleOffset: 0.22 },
+      spoilerOffset: { x: -32, y: -8 },
+      wheelXFront: 19,
+      wheelXRear: -20,
+      wheelY: 6.5
+    },
+    {
+      id: 'hatchback',
+      name: 'Yellow Hatchback',
+      subtitle: 'Urban Hot Hatch Rocket',
+      price: 250,
+      colorName: 'Electric Yellow',
+      type: 'hatchback',
+      underNozzle: { x: -4, y: 8, angleOffset: 0.12 },
+      rearNozzle: { x: -31, y: 4, angleOffset: 0.22 },
+      spoilerOffset: { x: -28, y: -8 },
+      wheelXFront: 18,
+      wheelXRear: -19,
+      wheelY: 6.5
+    },
+    {
+      id: 'supercar',
+      name: 'Orange Supercar',
+      subtitle: 'V10 Hypersonic Aero Blade',
+      price: 500,
+      colorName: 'Volcano Orange',
+      type: 'supercar',
+      underNozzle: { x: -5, y: 8, angleOffset: 0.12 },
+      rearNozzle: { x: -34, y: 4, angleOffset: 0.24 },
+      spoilerOffset: { x: -32, y: -9 },
+      wheelXFront: 20,
+      wheelXRear: -21,
+      wheelY: 6.5
+    }
+  ];
+
+  function getCarDef(carId) {
+    return CARS.find(c => c.id === carId) || CARS[0];
+  }
+
+  // ============================================================================
+  // GARAGE & COIN WALLET (LocalStorage persistence with corruption fallback)
+  // ============================================================================
+  const Garage = {
+    getCoins() {
+      try {
+        const val = localStorage.getItem('flappy_tesla_coins');
+        return val ? Math.max(0, parseInt(val, 10) || 0) : 0;
+      } catch (e) {
+        return 0;
+      }
+    },
+    addCoins(amount) {
+      const cur = this.getCoins();
+      const next = cur + Math.max(0, Math.floor(amount));
+      try {
+        localStorage.setItem('flappy_tesla_coins', next.toString());
+      } catch (e) {}
+      return next;
+    },
+    spendCoins(amount) {
+      const cur = this.getCoins();
+      if (cur < amount) return false;
+      const next = cur - amount;
+      try {
+        localStorage.setItem('flappy_tesla_coins', next.toString());
+      } catch (e) {}
+      return true;
+    },
+    getOwnedCars() {
+      try {
+        const raw = localStorage.getItem('flappy_tesla_owned_cars');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.includes('roadster')) {
+            // Keep only valid car IDs
+            const valid = parsed.filter(id => CARS.some(c => c.id === id));
+            if (!valid.includes('roadster')) valid.unshift('roadster');
+            return valid;
+          }
+        }
+      } catch (e) {}
+      const fallback = ['roadster'];
+      try {
+        localStorage.setItem('flappy_tesla_owned_cars', JSON.stringify(fallback));
+      } catch (e) {}
+      return fallback;
+    },
+    isCarOwned(carId) {
+      return this.getOwnedCars().includes(carId);
+    },
+    unlockCar(carId) {
+      const owned = this.getOwnedCars();
+      if (!owned.includes(carId)) {
+        owned.push(carId);
+        try {
+          localStorage.setItem('flappy_tesla_owned_cars', JSON.stringify(owned));
+        } catch (e) {}
+      }
+      return owned;
+    },
+    getEquippedCarId() {
+      try {
+        const equipped = localStorage.getItem('flappy_tesla_equipped_car');
+        if (equipped && CARS.some(c => c.id === equipped) && this.isCarOwned(equipped)) {
+          return equipped;
+        }
+      } catch (e) {}
+      return 'roadster';
+    },
+    setEquippedCarId(carId) {
+      if (CARS.some(c => c.id === carId) && this.isCarOwned(carId)) {
+        try {
+          localStorage.setItem('flappy_tesla_equipped_car', carId);
+        } catch (e) {}
+        return true;
+      }
+      return false;
+    }
+  };
+
   const CONSTANTS = {
     // Physics constants (pixels / sec^2 and pixels / sec)
     GRAVITY: 980,             // Downward acceleration pulling the car
@@ -1145,6 +1701,49 @@
         osc.start(t);
         osc.stop(t + 0.16);
       });
+    }
+
+    // Purchase sound: upbeat celebratory chime + coin shimmer
+    playPurchaseSound() {
+      if (!this.ctx || this.isMuted) return;
+      this.resume();
+      const now = this.ctx.currentTime;
+
+      // 4-note ascending celebratory arpeggio: E5 -> G#5 -> B5 -> E6
+      const notes = [659.25, 830.61, 987.77, 1318.51];
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.055;
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.24, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(t);
+        osc.stop(t + 0.19);
+      });
+
+      // Metallic coin shimmer
+      const shimmer = this.ctx.createOscillator();
+      const shimGain = this.ctx.createGain();
+      shimmer.type = 'sine';
+      shimmer.frequency.setValueAtTime(1864, now + 0.18);
+      shimmer.frequency.exponentialRampToValueAtTime(2793, now + 0.38);
+
+      shimGain.gain.setValueAtTime(0.20, now + 0.18);
+      shimGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+      shimmer.connect(shimGain);
+      shimGain.connect(this.masterGain);
+
+      shimmer.start(now + 0.18);
+      shimmer.stop(now + 0.44);
     }
 
     // Crash sound: violent noise burst + low-frequency impact thud
@@ -1602,14 +2201,659 @@
   }
 
   // ============================================================================
-  // 5. ROADSTER ENTITY
-  // Sleek red Tesla Roadster drawn with vector canvas paths.
-  // Pitch angle tilts dynamically with vertical velocity and thruster state.
+  // 5. CAR VECTOR GRAPHICS & ROADSTER ENTITY
+  // All 5 cars share the EXACT same physics, hitbox (54x11px), terminal velocities,
+  // cold-gas thruster plumes, and tilt smoothing for 100% gameplay parity.
   // ============================================================================
+
+  // Universal performance wheel with spinning alloy spokes
+  function drawWheel(ctx, x, y, rotation, caliperColor = '#e81123', spokeColor = '#95a5a6') {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Dark wheel well cutout behind tire
+    ctx.fillStyle = '#0a0910';
+    ctx.beginPath();
+    ctx.arc(0, -1, 6.8, Math.PI, 0, false);
+    ctx.fill();
+
+    // Outer rubber performance tire
+    ctx.fillStyle = '#1c1c20';
+    ctx.beginPath();
+    ctx.arc(0, 0, 6.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tire sidewall rim
+    ctx.strokeStyle = '#2d2d34';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, 5.2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Performance brake caliper
+    ctx.fillStyle = caliperColor;
+    ctx.fillRect(-2, -4.5, 3.5, 2);
+
+    // Spinning alloy spokes
+    ctx.rotate(rotation);
+    ctx.strokeStyle = spokeColor;
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const ang = (i * Math.PI * 2) / 5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ang) * 4.2, Math.sin(ang) * 4.2);
+      ctx.stroke();
+    }
+
+    // Center chrome hub cap
+    ctx.fillStyle = '#ecf0f1';
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // 1. TESLA ROADSTER 2.0 (Metallic Red Sports Car)
+  function drawRoadsterBody(ctx) {
+    // Underbody diffuser & splitter
+    ctx.fillStyle = '#141416';
+    ctx.beginPath();
+    ctx.moveTo(-33, 7);
+    ctx.lineTo(31, 7);
+    ctx.lineTo(34, 6);
+    ctx.lineTo(28, 4);
+    ctx.lineTo(-32, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Thruster nozzle titanium canisters
+    ctx.fillStyle = '#485460';
+    ctx.fillRect(-33, 2, 4, 5); // Rear
+    ctx.fillRect(-7, 6, 6, 3);  // Underbody
+
+    // Main Body: Tesla Multi-coat Metallic Red
+    const bodyGrad = ctx.createLinearGradient(0, -10, 0, 8);
+    bodyGrad.addColorStop(0, '#ff3848');
+    bodyGrad.addColorStop(0.35, '#d61122');
+    bodyGrad.addColorStop(0.85, '#a60a17');
+    bodyGrad.addColorStop(1, '#5c050d');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.moveTo(33, 5);
+    ctx.quadraticCurveTo(34, 1, 31, -1);
+    ctx.lineTo(13, -3);
+    ctx.lineTo(2, -9);
+    ctx.quadraticCurveTo(-10, -11, -18, -6);
+    ctx.lineTo(-27, -4);
+    ctx.lineTo(-32, -5);
+    ctx.lineTo(-33, -3);
+    ctx.quadraticCurveTo(-33, 2, -31, 6);
+    ctx.lineTo(26, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glass Canopy
+    const glassGrad = ctx.createLinearGradient(-10, -11, 5, -2);
+    glassGrad.addColorStop(0, '#1a2233');
+    glassGrad.addColorStop(0.6, '#0f1420');
+    glassGrad.addColorStop(1, '#27384e');
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(11, -3);
+    ctx.lineTo(1, -8.5);
+    ctx.quadraticCurveTo(-10, -10.2, -18, -5.5);
+    ctx.lineTo(-21, -3.5);
+    ctx.lineTo(9, -2.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Windshield specular gleam
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(2, -8);
+    ctx.lineTo(7, -3.5);
+    ctx.stroke();
+
+    // Driver silhouette
+    ctx.fillStyle = '#0a0d14';
+    ctx.beginPath();
+    ctx.arc(-5, -5.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shoulder contour line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(30, 0);
+    ctx.lineTo(12, -2.2);
+    ctx.quadraticCurveTo(-12, -1, -30, -3.5);
+    ctx.stroke();
+
+    // Cyan LED Headlight
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(33, 3);
+    ctx.lineTo(26, 1.5);
+    ctx.lineTo(29, 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Red LED Taillight
+    ctx.fillStyle = '#ff2030';
+    ctx.shadowColor = '#ff0020';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(-33.5, -4, 2.2, 3);
+    ctx.shadowBlur = 0;
+  }
+
+  // 2. GREY CYBER SUV (Boxy tall body, roof rack, rugged skid plate)
+  function drawSUVBody(ctx) {
+    // Underbody rugged skid plate
+    ctx.fillStyle = '#10141a';
+    ctx.beginPath();
+    ctx.moveTo(-33, 7);
+    ctx.lineTo(31, 7);
+    ctx.lineTo(33, 6);
+    ctx.lineTo(27, 4);
+    ctx.lineTo(-32, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Titanium thruster nozzles
+    ctx.fillStyle = '#485460';
+    ctx.fillRect(-33, 2, 4, 5); // Rear
+    ctx.fillRect(-6, 6, 6, 3);  // Underbody
+
+    // Main Body: Stealth Grey Gradient
+    const bodyGrad = ctx.createLinearGradient(0, -11, 0, 8);
+    bodyGrad.addColorStop(0, '#8395a7');
+    bodyGrad.addColorStop(0.35, '#576574');
+    bodyGrad.addColorStop(0.85, '#2f3542');
+    bodyGrad.addColorStop(1, '#1e272e');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    // Front upright fascia & angular hood
+    ctx.moveTo(33, 5);
+    ctx.lineTo(33, 1);
+    ctx.lineTo(31, -2);
+    ctx.lineTo(12, -4);
+    // Steep rugged A-pillar
+    ctx.lineTo(3, -10);
+    // Flat tall roofline
+    ctx.lineTo(-24, -10);
+    // Angular rear tailgate
+    ctx.lineTo(-31, -5);
+    ctx.lineTo(-33, 2);
+    ctx.lineTo(-31, 6);
+    ctx.lineTo(27, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Roof rack rails & crossbars
+    ctx.strokeStyle = '#2f3542';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-20, -12);
+    ctx.lineTo(8, -12);
+    ctx.stroke();
+    // Stanchions
+    ctx.fillStyle = '#1e272e';
+    ctx.fillRect(-18, -12, 3, 2.5);
+    ctx.fillRect(-6, -12, 3, 2.5);
+    ctx.fillRect(5, -12, 3, 2.5);
+
+    // SUV Side Windows: 3 dark tinted panes
+    const winGrad = ctx.createLinearGradient(-10, -10, 5, -3);
+    winGrad.addColorStop(0, '#151d28');
+    winGrad.addColorStop(1, '#2c3e50');
+
+    ctx.fillStyle = winGrad;
+    // Front cabin window
+    ctx.beginPath();
+    ctx.moveTo(10, -3.5);
+    ctx.lineTo(2, -9);
+    ctx.lineTo(-4, -9);
+    ctx.lineTo(-4, -3.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rear passenger window
+    ctx.beginPath();
+    ctx.moveTo(-6, -3.5);
+    ctx.lineTo(-6, -9);
+    ctx.lineTo(-14, -9);
+    ctx.lineTo(-14, -3.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cargo quarter window
+    ctx.beginPath();
+    ctx.moveTo(-16, -3.5);
+    ctx.lineTo(-16, -9);
+    ctx.lineTo(-22, -9);
+    ctx.lineTo(-28, -5);
+    ctx.lineTo(-24, -3.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Window gleam
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(2, -8.5);
+    ctx.lineTo(6, -4);
+    ctx.stroke();
+
+    // Driver silhouette
+    ctx.fillStyle = '#0b0e14';
+    ctx.beginPath();
+    ctx.arc(-1, -6, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Angular cyber body line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(31, -1);
+    ctx.lineTo(12, -3);
+    ctx.lineTo(-30, -3);
+    ctx.stroke();
+
+    // Front Laser Headlight Bar (Cyan)
+    ctx.fillStyle = '#00d2d3';
+    ctx.shadowColor = '#00d2d3';
+    ctx.shadowBlur = 7;
+    ctx.fillRect(30, 0, 3.5, 3.5);
+    ctx.shadowBlur = 0;
+
+    // Rear Full-Height Vertical LED Blade Taillight (Red)
+    ctx.fillStyle = '#ff4757';
+    ctx.shadowColor = '#ff4757';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(-32, -6, 2.5, 8);
+    ctx.shadowBlur = 0;
+  }
+
+  // 3. WHITE MINIVAN (Long rounded body, aero profile, sliding-door seam)
+  function drawMinivanBody(ctx) {
+    // Underbody aero tray
+    ctx.fillStyle = '#1a1d24';
+    ctx.beginPath();
+    ctx.moveTo(-33, 7);
+    ctx.lineTo(31, 7);
+    ctx.lineTo(33, 6);
+    ctx.lineTo(27, 4);
+    ctx.lineTo(-32, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Titanium thrusters
+    ctx.fillStyle = '#485460';
+    ctx.fillRect(-33, 2, 4, 5); // Rear
+    ctx.fillRect(-6, 6, 6, 3);  // Underbody
+
+    // Main Body: Pearl White Gradient
+    const bodyGrad = ctx.createLinearGradient(0, -10, 0, 8);
+    bodyGrad.addColorStop(0, '#ffffff');
+    bodyGrad.addColorStop(0.35, '#f1f2f6');
+    bodyGrad.addColorStop(0.85, '#ced6e0');
+    bodyGrad.addColorStop(1, '#747d8c');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    // Low rounded nose curving into sweeping aero windshield
+    ctx.moveTo(33, 5);
+    ctx.quadraticCurveTo(34, 1, 29, -1);
+    ctx.lineTo(18, -3);
+    // Smooth raked aero windshield
+    ctx.lineTo(7, -8.5);
+    // Gently curved spacious roofline
+    ctx.quadraticCurveTo(-8, -10, -22, -8);
+    // Smooth tapered rear aero hatch
+    ctx.quadraticCurveTo(-30, -7, -32, 0);
+    ctx.lineTo(-32, 5);
+    ctx.lineTo(27, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Continuous Panoramic Glass Canopy
+    const glassGrad = ctx.createLinearGradient(-10, -10, 5, -2);
+    glassGrad.addColorStop(0, '#101726');
+    glassGrad.addColorStop(0.6, '#1e293b');
+    glassGrad.addColorStop(1, '#334155');
+
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(16, -2.5);
+    ctx.lineTo(6, -8);
+    ctx.quadraticCurveTo(-8, -9.2, -21, -7.5);
+    ctx.lineTo(-27, -5);
+    ctx.lineTo(-27, -2.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Black window pillars (B-pillar and C-pillar)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, -8, 2, 6);
+    ctx.fillRect(-11, -8.2, 2, 6);
+
+    // Sliding Door Track & Panel Seam Line
+    ctx.strokeStyle = '#57606f';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    // Lower sliding door runner track
+    ctx.moveTo(-24, 1.5);
+    ctx.lineTo(-6, 1.5);
+    // Vertical sliding door shut line
+    ctx.moveTo(-5, -2.5);
+    ctx.lineTo(-5, 6);
+    ctx.stroke();
+
+    // Sleek chrome door handles
+    ctx.fillStyle = '#2f3542';
+    ctx.fillRect(-4, 0.5, 3.5, 1.2);
+    ctx.fillRect(-16, 0.5, 3.5, 1.2);
+
+    // Windshield reflection
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(6, -7.5);
+    ctx.lineTo(12, -3);
+    ctx.stroke();
+
+    // Driver silhouette
+    ctx.fillStyle = '#0b0f19';
+    ctx.beginPath();
+    ctx.arc(3, -5.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Modern Curved LED Matrix Headlight (Ice Blue)
+    ctx.fillStyle = '#e0ffff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(33, 3);
+    ctx.lineTo(27, 0.5);
+    ctx.lineTo(29, 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Modern Vertical Ribbon Taillight (Red)
+    ctx.fillStyle = '#ff3838';
+    ctx.shadowColor = '#ff3838';
+    ctx.shadowBlur = 7;
+    ctx.fillRect(-32.5, -4, 2.2, 7);
+    ctx.shadowBlur = 0;
+  }
+
+  // 4. YELLOW HATCHBACK (Short compact shape, rear roof spoiler)
+  function drawHatchbackBody(ctx) {
+    // Underbody splitter & diffuser
+    ctx.fillStyle = '#141416';
+    ctx.beginPath();
+    ctx.moveTo(-31, 7);
+    ctx.lineTo(31, 7);
+    ctx.lineTo(33, 6);
+    ctx.lineTo(27, 4);
+    ctx.lineTo(-30, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Titanium thrusters
+    ctx.fillStyle = '#485460';
+    ctx.fillRect(-31, 2, 4, 5); // Rear
+    ctx.fillRect(-7, 6, 6, 3);  // Underbody
+
+    // Main Body: Electric Yellow Metallic Gradient
+    const bodyGrad = ctx.createLinearGradient(0, -9, 0, 8);
+    bodyGrad.addColorStop(0, '#fff200');
+    bodyGrad.addColorStop(0.35, '#ffd32a');
+    bodyGrad.addColorStop(0.85, '#ff9f1a');
+    bodyGrad.addColorStop(1, '#875a00');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    // Compact front nose & short sporty hood
+    ctx.moveTo(32, 5);
+    ctx.quadraticCurveTo(33, 1, 29, -1);
+    ctx.lineTo(13, -3);
+    // Sporty windshield
+    ctx.lineTo(3, -9);
+    // Compact flat roofline
+    ctx.lineTo(-16, -9);
+    // Extended aggressive roof spoiler
+    ctx.lineTo(-27, -8.5);
+    // Sharply chopped vertical rear hatch
+    ctx.lineTo(-28, -4);
+    ctx.lineTo(-30, 3);
+    ctx.lineTo(-29, 6);
+    ctx.lineTo(26, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Black contrast sport roof spoiler lip
+    ctx.fillStyle = '#1e272e';
+    ctx.fillRect(-28, -9.5, 10, 1.8);
+
+    // Side Windows (Sport compact two-box greenhouse)
+    const winGrad = ctx.createLinearGradient(-10, -9, 5, -2);
+    winGrad.addColorStop(0, '#121824');
+    winGrad.addColorStop(1, '#2c3e50');
+
+    ctx.fillStyle = winGrad;
+    ctx.beginPath();
+    ctx.moveTo(11, -2.5);
+    ctx.lineTo(2, -8.2);
+    ctx.lineTo(-15, -8.2);
+    ctx.lineTo(-22, -4);
+    ctx.lineTo(-22, -2.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // B-pillar divider
+    ctx.fillStyle = '#11141a';
+    ctx.fillRect(-4, -8.2, 2.5, 6);
+
+    // Windshield specular gleam
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(2, -7.5);
+    ctx.lineTo(7, -3);
+    ctx.stroke();
+
+    // Driver silhouette
+    ctx.fillStyle = '#0b0e14';
+    ctx.beginPath();
+    ctx.arc(-2, -5.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sporty shoulder crease line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(28, 0);
+    ctx.lineTo(12, -2);
+    ctx.lineTo(-26, -2);
+    ctx.stroke();
+
+    // Aggressive Front Cat-Eye LED Headlight
+    ctx.fillStyle = '#fffbe0';
+    ctx.shadowColor = '#ffd32a';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(32, 3);
+    ctx.lineTo(26, 1);
+    ctx.lineTo(28, 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Compact Ruby 3D LED Taillight
+    ctx.fillStyle = '#ff1744';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = 7;
+    ctx.fillRect(-30, -1, 2.4, 4);
+    ctx.shadowBlur = 0;
+  }
+
+  // 5. ORANGE SUPERCAR (Very low wedge shape, extreme aerodynamics, prominent rear GT wing)
+  function drawSupercarBody(ctx) {
+    // Extreme front carbon splitter & dual rear diffuser tunnels
+    ctx.fillStyle = '#0d0e12';
+    ctx.beginPath();
+    ctx.moveTo(-34, 7);
+    ctx.lineTo(32, 7);
+    ctx.lineTo(35, 6);
+    ctx.lineTo(28, 4);
+    ctx.lineTo(-33, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Titanium thrusters
+    ctx.fillStyle = '#485460';
+    ctx.fillRect(-34, 2, 4, 5); // Rear
+    ctx.fillRect(-8, 6, 6, 3);  // Underbody
+
+    // Main Body: Volcano Orange Pearl Metallic Gradient
+    const bodyGrad = ctx.createLinearGradient(0, -8, 0, 8);
+    bodyGrad.addColorStop(0, '#ff9f43');
+    bodyGrad.addColorStop(0.35, '#ff5252');
+    bodyGrad.addColorStop(0.85, '#d63031');
+    bodyGrad.addColorStop(1, '#540614');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    // Ultra-low pointed nose cone
+    ctx.moveTo(34, 5.5);
+    ctx.lineTo(34, 4);
+    ctx.lineTo(29, 0);
+    // Extreme low wedge hood
+    ctx.lineTo(11, -2);
+    // Fighter-jet bubble canopy
+    ctx.lineTo(2, -7.5);
+    ctx.quadraticCurveTo(-6, -8.5, -14, -5.5);
+    // Long flat rear engine deck
+    ctx.lineTo(-29, -2.5);
+    ctx.lineTo(-33, 0);
+    ctx.lineTo(-33, 6);
+    ctx.lineTo(27, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Large Carbon Side NACA Air Duct Scoop
+    ctx.fillStyle = '#14151a';
+    ctx.beginPath();
+    ctx.moveTo(-3, 0);
+    ctx.lineTo(-13, -2);
+    ctx.lineTo(-13, 3);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rear High-Downforce GT Wing
+    // Dual Carbon Pylons
+    ctx.fillStyle = '#1e2026';
+    ctx.fillRect(-26, -9.5, 2.2, 7.5);
+    ctx.fillRect(-20, -9.5, 2.2, 7.5);
+
+    // Carbon Wing Airfoil Blade & Orange Endplates
+    ctx.fillStyle = '#121317';
+    ctx.fillRect(-33, -10.5, 16, 2);
+    ctx.fillStyle = '#ff5252';
+    ctx.fillRect(-33.5, -11.5, 1.5, 4); // Left endplate
+    ctx.fillRect(-17.5, -11.5, 1.5, 4); // Right endplate
+
+    // Fighter-Jet Iridescent Cockpit Canopy
+    const glassGrad = ctx.createLinearGradient(-10, -8, 5, -2);
+    glassGrad.addColorStop(0, '#0a192f');
+    glassGrad.addColorStop(0.5, '#112240');
+    glassGrad.addColorStop(1, '#1f4068');
+
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(9, -2);
+    ctx.lineTo(1, -7);
+    ctx.quadraticCurveTo(-6, -8, -13, -5);
+    ctx.lineTo(-16, -2.2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Cyan windshield iridescent glare
+    ctx.strokeStyle = 'rgba(0, 245, 212, 0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(1, -6.5);
+    ctx.lineTo(6, -2.5);
+    ctx.stroke();
+
+    // Driver silhouette
+    ctx.fillStyle = '#060a12';
+    ctx.beginPath();
+    ctx.arc(-4, -4.5, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Razor-Thin Quad-LED Headlights (Electric Cyan)
+    ctx.fillStyle = '#00f5d4';
+    ctx.shadowColor = '#00f5d4';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(30, 2, 3.5, 1.8);
+    ctx.shadowBlur = 0;
+
+    // Glowing Neon Taillight Ribbon (Hyper Red)
+    ctx.fillStyle = '#ff1744';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = 9;
+    ctx.fillRect(-33.5, -2, 2.2, 4);
+    ctx.shadowBlur = 0;
+  }
+
+  // Universal Car Dispatcher
+  function drawCar(ctx, carDef, wheelRotation) {
+    switch (carDef.type) {
+      case 'suv':
+        drawSUVBody(ctx);
+        drawWheel(ctx, carDef.wheelXFront, carDef.wheelY, wheelRotation, '#00d2d3', '#747d8c');
+        drawWheel(ctx, carDef.wheelXRear, carDef.wheelY, wheelRotation, '#00d2d3', '#747d8c');
+        break;
+      case 'minivan':
+        drawMinivanBody(ctx);
+        drawWheel(ctx, carDef.wheelXFront, carDef.wheelY, wheelRotation, '#3498db', '#bdc3c7');
+        drawWheel(ctx, carDef.wheelXRear, carDef.wheelY, wheelRotation, '#3498db', '#bdc3c7');
+        break;
+      case 'hatchback':
+        drawHatchbackBody(ctx);
+        drawWheel(ctx, carDef.wheelXFront, carDef.wheelY, wheelRotation, '#e74c3c', '#f1c40f');
+        drawWheel(ctx, carDef.wheelXRear, carDef.wheelY, wheelRotation, '#e74c3c', '#f1c40f');
+        break;
+      case 'supercar':
+        drawSupercarBody(ctx);
+        drawWheel(ctx, carDef.wheelXFront, carDef.wheelY, wheelRotation, '#f39c12', '#2f3542');
+        drawWheel(ctx, carDef.wheelXRear, carDef.wheelY, wheelRotation, '#f39c12', '#2f3542');
+        break;
+      case 'roadster':
+      default:
+        drawRoadsterBody(ctx);
+        drawWheel(ctx, carDef.wheelXFront, carDef.wheelY, wheelRotation, '#e81123', '#95a5a6');
+        drawWheel(ctx, carDef.wheelXRear, carDef.wheelY, wheelRotation, '#e81123', '#95a5a6');
+        break;
+    }
+  }
+
   class Roadster {
     constructor(x, y) {
       this.playX = x;
       this.playY = y;
+      this.carDef = getCarDef(Garage.getEquippedCarId());
       this.reset();
     }
 
@@ -1619,19 +2863,12 @@
       this.vy = 0;
       this.angle = 0;
       this.wheelRotation = 0;
-      this.thrustOutput = 0; // Smooth 0 to 1 thruster envelope for visuals & sound
+      this.thrustOutput = 0;
       this.alive = true;
       this.idleTimer = 0;
+      this.carDef = getCarDef(Garage.getEquippedCarId());
     }
 
-    // --------------------------------------------------------------------------
-    // FLIGHT PHYSICS UPDATE
-    // Comments on thrust physics:
-    // 1. Upward acceleration is applied while isThrusting is true.
-    // 2. Constant gravity pulls downward continuously.
-    // 3. Vertical velocity is smoothly integrated and clamped.
-    // 4. Thruster output ramps up in ~35ms and tapers down over ~150ms.
-    // --------------------------------------------------------------------------
     update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
       if (!this.alive) return;
 
@@ -1645,7 +2882,8 @@
 
         // Occasional gentle hover puff from underbody thruster
         if (Math.sin(this.idleTimer * 2) > 0.94) {
-          particleSystem.emitColdGasPlume(this.x - 4, this.y + 8, Math.PI / 2 + 0.1, 0, 40, 0.4);
+          const under = this.carDef.underNozzle;
+          particleSystem.emitColdGasPlume(this.x + under.x, this.y + under.y, Math.PI / 2 + under.angleOffset, 0, 40, 0.4);
         }
         return;
       }
@@ -1669,37 +2907,31 @@
       // Position update
       this.y += this.vy * dt;
 
-      // Wheel spin while airborne (rotates faster as scroll speed increases)
+      // Wheel spin while airborne
       this.wheelRotation += dt * (currentSpeed / 15);
 
       // Pitch tilting: nose pitches up slightly during climb/thrust, down when falling
       let targetAngle = 0;
       if (this.vy < 0) {
-        // vy is negative (upward) -> negative targetAngle -> counter-clockwise rotation -> NOSE UP
         targetAngle = (this.vy / Math.abs(CONSTANTS.MAX_CLIMB_SPEED)) * 0.28;
       } else {
-        // vy is positive (downward) -> positive targetAngle -> clockwise rotation -> NOSE DOWN
         targetAngle = (this.vy / CONSTANTS.MAX_FALL_SPEED) * 0.40;
       }
-      // Smooth interpolation for aerodynamic weight feel
       this.angle += (targetAngle - this.angle) * Math.min(1.0, dt * 10);
 
-      // Nozzle world positions (accounting for car rotation)
+      // Dynamic Nozzle World Positions based on Equipped Car Model
       const cosA = Math.cos(this.angle);
       const sinA = Math.sin(this.angle);
 
-      // Local nozzle offsets:
-      // 1. Underbody ventral nozzle (mid-chassis pointing down: local lx = -4, ly = 8)
-      const underX = this.x + (-4 * cosA - 8 * sinA);
-      const underY = this.y + (-4 * sinA + 8 * cosA);
-      // Downward exhaust direction vector (relative to tilted car)
-      const underAngle = this.angle + Math.PI / 2 + 0.12;
+      const un = this.carDef.underNozzle;
+      const underX = this.x + (un.x * cosA - un.y * sinA);
+      const underY = this.y + (un.x * sinA + un.y * cosA);
+      const underAngle = this.angle + Math.PI / 2 + un.angleOffset;
 
-      // 2. Rear license-plate thruster nozzle (rear diffuser pointing back and down: local lx = -33, ly = 4)
-      const rearX = this.x + (-33 * cosA - 4 * sinA);
-      const rearY = this.y + (-33 * sinA + 4 * cosA);
-      // Rearward exhaust direction vector
-      const rearAngle = this.angle + Math.PI + 0.22;
+      const rn = this.carDef.rearNozzle;
+      const rearX = this.x + (rn.x * cosA - rn.y * sinA);
+      const rearY = this.y + (rn.x * sinA + rn.y * cosA);
+      const rearAngle = this.angle + Math.PI + rn.angleOffset;
 
       // Initial burst puff shockwave
       if (thrustJustPressed) {
@@ -1707,20 +2939,21 @@
         particleSystem.emitPuffBurst(rearX, rearY, rearAngle);
       }
 
-      // Emit continuous cold-gas plume based on current thrust output and scroll speed
+      // Emit continuous cold-gas plume
       if (this.thrustOutput > 0.05) {
         particleSystem.emitColdGasPlume(underX, underY, underAngle, -currentSpeed * 0.4, this.vy * 0.3, this.thrustOutput);
         particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -currentSpeed * 0.5, this.vy * 0.2, this.thrustOutput);
       }
 
-      // Aerodynamic vapor trail streaming off rear ducktail spoiler
-      const spoilerX = this.x + (-31 * cosA - (-7) * sinA);
-      const spoilerY = this.y + (-31 * sinA + (-7) * cosA);
+      // Aerodynamic vapor trail streaming off rear spoiler
+      const sp = this.carDef.spoilerOffset;
+      const spoilerX = this.x + (sp.x * cosA - sp.y * sinA);
+      const spoilerY = this.y + (sp.x * sinA + sp.y * cosA);
       if (Math.random() < 0.65) {
         particleSystem.emitVaporTrail(spoilerX, spoilerY, currentSpeed);
       }
 
-      // Ground dust / vapor ripple effect when skimming low over the desert tarmac
+      // Ground dust / vapor ripple effect
       const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
       const altitude = groundY - (this.y + 10);
       if (altitude < 85 && this.thrustOutput > 0.15) {
@@ -1730,6 +2963,7 @@
     }
 
     // Snug bounding box slightly inset from the visual sprite for fair arcade collisions
+    // IDENTICAL ON ALL CAR MODELS (54x11px)
     getHitbox() {
       const hw = (CONSTANTS.CAR_WIDTH / 2) - CONSTANTS.HITBOX_INSET_X;
       const hh = (CONSTANTS.CAR_HEIGHT / 2) - CONSTANTS.HITBOX_INSET_Y;
@@ -1748,175 +2982,13 @@
       ctx.translate(this.x, this.y);
       ctx.rotate(this.angle);
 
-      // ------------------------------------------------------------------------
-      // TESLA ROADSTER 2.0 SIDE-VIEW VECTOR ART
-      // Rendered with precise canvas paths: low aerodynamic nose, cabin bubble,
-      // carbon splitters, glowing red LED taillight, multi-spoke alloy wheels.
-      // ------------------------------------------------------------------------
-
-      // 1. Underbody Shadow & Carbon Fiber Diffuser / Front Splitter
-      ctx.fillStyle = '#141416';
-      ctx.beginPath();
-      ctx.moveTo(-33, 7);
-      ctx.lineTo(31, 7);
-      ctx.lineTo(34, 6);
-      ctx.lineTo(28, 4);
-      ctx.lineTo(-32, 4);
-      ctx.closePath();
-      ctx.fill();
-
-      // Cold-gas thruster nozzle blocks (high-tech titanium canisters)
-      ctx.fillStyle = '#485460';
-      ctx.fillRect(-33, 2, 4, 5); // Rear nozzle bell
-      ctx.fillRect(-7, 6, 6, 3);  // Underbody ventral nozzle bell
-
-      // 2. Main Car Body (Multi-coat Tesla Metallic Red)
-      const bodyGrad = ctx.createLinearGradient(0, -10, 0, 8);
-      bodyGrad.addColorStop(0, '#ff3848');   // Top sun highlight
-      bodyGrad.addColorStop(0.35, '#d61122');// Tesla signature red
-      bodyGrad.addColorStop(0.85, '#a60a17');// Deep body flank
-      bodyGrad.addColorStop(1, '#5c050d');   // Underside shadow
-
-      ctx.fillStyle = bodyGrad;
-      ctx.beginPath();
-      // Start at sharp aerodynamic front nose tip
-      ctx.moveTo(33, 5);
-      // Front bumper curve up to hood
-      ctx.quadraticCurveTo(34, 1, 31, -1);
-      // Low sweeping front hood line
-      ctx.lineTo(13, -3);
-      // Windshield A-pillar incline
-      ctx.lineTo(2, -9);
-      // Curved aerodynamic glass roof arc
-      ctx.quadraticCurveTo(-10, -11, -18, -6);
-      // Rear fastback hatch sloping down to ducktail spoiler
-      ctx.lineTo(-27, -4);
-      // Ducktail spoiler lip
-      ctx.lineTo(-32, -5);
-      ctx.lineTo(-33, -3);
-      // Rear bumper drop down to diffuser
-      ctx.quadraticCurveTo(-33, 2, -31, 6);
-      // Bottom rocker panel line towards front
-      ctx.lineTo(26, 6);
-      ctx.closePath();
-      ctx.fill();
-
-      // 3. Cabin Bubble / Tinted Glass Canopy
-      const glassGrad = ctx.createLinearGradient(-10, -11, 5, -2);
-      glassGrad.addColorStop(0, '#1a2233');
-      glassGrad.addColorStop(0.6, '#0f1420');
-      glassGrad.addColorStop(1, '#27384e');
-
-      ctx.fillStyle = glassGrad;
-      ctx.beginPath();
-      ctx.moveTo(11, -3);
-      ctx.lineTo(1, -8.5);
-      ctx.quadraticCurveTo(-10, -10.2, -18, -5.5);
-      ctx.lineTo(-21, -3.5);
-      ctx.lineTo(9, -2.5);
-      ctx.closePath();
-      ctx.fill();
-
-      // White diagonal specular gleam on windshield
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(2, -8);
-      ctx.lineTo(7, -3.5);
-      ctx.stroke();
-
-      // Driver silhouette hint inside cabin
-      ctx.fillStyle = '#0a0d14';
-      ctx.beginPath();
-      ctx.arc(-5, -5.5, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 4. Subtle Body Contour Highlights & Shoulder Line
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(30, 0);
-      ctx.lineTo(12, -2.2);
-      ctx.quadraticCurveTo(-12, -1, -30, -3.5);
-      ctx.stroke();
-
-      // 5. Sleek Front Headlight Slit (Glowing futuristic white/cyan LED)
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 6;
-      ctx.beginPath();
-      ctx.moveTo(33, 3);
-      ctx.lineTo(26, 1.5);
-      ctx.lineTo(29, 3.5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0; // Reset shadow
-
-      // 6. Glowing Red LED Lightbar Taillight
-      ctx.fillStyle = '#ff2030';
-      ctx.shadowColor = '#ff0020';
-      ctx.shadowBlur = 8;
-      ctx.fillRect(-33.5, -4, 2.2, 3);
-      ctx.shadowBlur = 0; // Reset shadow
-
-      // 7. Wheels & Tires
-      // Front wheel at x: 19, Rear wheel at x: -20
-      this.drawWheel(ctx, 19, 6.5, this.wheelRotation);
-      this.drawWheel(ctx, -20, 6.5, this.wheelRotation);
-
-      ctx.restore();
-    }
-
-    drawWheel(ctx, x, y, rotation) {
-      ctx.save();
-      ctx.translate(x, y);
-
-      // Dark wheel well cutout behind tire
-      ctx.fillStyle = '#0a0910';
-      ctx.beginPath();
-      ctx.arc(0, -1, 6.8, Math.PI, 0, false);
-      ctx.fill();
-
-      // Outer rubber performance tire
-      ctx.fillStyle = '#1c1c20';
-      ctx.beginPath();
-      ctx.arc(0, 0, 6.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Tire sidewall rim
-      ctx.strokeStyle = '#2d2d34';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(0, 0, 5.2, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Red Brembo performance brake caliper
-      ctx.fillStyle = '#e81123';
-      ctx.fillRect(-2, -4.5, 3.5, 2);
-
-      // Gunmetal alloy wheel rim & spinning spokes
-      ctx.rotate(rotation);
-      ctx.strokeStyle = '#95a5a6';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 5; i++) {
-        const ang = (i * Math.PI * 2) / 5;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 4.2, Math.sin(ang) * 4.2);
-        ctx.stroke();
-      }
-
-      // Center wheel hub cap (Tesla chrome logo dot)
-      ctx.fillStyle = '#ecf0f1';
-      ctx.beginPath();
-      ctx.arc(0, 0, 1.4, 0, Math.PI * 2);
-      ctx.fill();
+      drawCar(ctx, this.carDef, this.wheelRotation);
 
       ctx.restore();
     }
   }
 
-  // ============================================================================
+    // ============================================================================
   // 6. STARBASE LAUNCH TOWER OBSTACLES
   // SpaceX / Starbase launch-tower pillars (steel lattice trusses, warning stripes,
   // aviation strobe beacons, caution bumpers).
@@ -2432,6 +3504,11 @@
       this.roadster.alive = false;
       this.gameOverTimer = 0;
 
+      // Add coins earned in this flight (1 point = 1 coin)
+      this.earnedCoins = this.score;
+      Garage.addCoins(this.earnedCoins);
+      updateAllCoinDisplays();
+
       // Play synthesized crash audio
       this.audio.playCrash();
 
@@ -2751,7 +3828,7 @@
         ctx.textAlign = 'center';
 
         const panelW = 340;
-        const panelH = 246;
+        const panelH = 268;
         const panelX = 85;
         const panelY = H / 2 - panelH / 2;
         const centerX = panelX + panelW / 2;
@@ -2769,37 +3846,43 @@
         ctx.fillStyle = '#e74c3c';
         ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.letterSpacing = '1px';
-        ctx.fillText('FLIGHT TERMINATED', centerX, panelY + 38);
+        ctx.fillText('FLIGHT TERMINATED', centerX, panelY + 36);
 
         // Score row
         ctx.fillStyle = '#a4b0be';
         ctx.font = '600 13px monospace';
-        ctx.fillText('FINAL SCORE', centerX, panelY + 72);
+        ctx.fillText('FINAL SCORE', centerX, panelY + 66);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 40px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText(this.score, centerX, panelY + 114);
+        ctx.font = '900 38px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(this.score, centerX, panelY + 104);
+
+        // Coins earned this run (+N COINS EARNED)
+        ctx.fillStyle = '#ffd32a';
+        ctx.font = '800 14px monospace';
+        const earned = this.earnedCoins !== undefined ? this.earnedCoins : this.score;
+        ctx.fillText(`+${earned} COINS EARNED 🪙`, centerX, panelY + 128);
 
         // Top speed reached in km/h
         ctx.fillStyle = '#00d2d3';
         ctx.font = '700 12px monospace';
-        ctx.fillText(`TOP SPEED: ${this.getScrollSpeed()} KM/H [LVL ${this.getSpeedLevel()}]`, centerX, panelY + 140);
+        ctx.fillText(`TOP SPEED: ${this.getScrollSpeed()} KM/H [LVL ${this.getSpeedLevel()}]`, centerX, panelY + 152);
 
-        // Best score & New High Score badge
+        // Best score & Wallet total
         ctx.font = '700 13px monospace';
         if (this.isNewHighScore) {
           ctx.fillStyle = '#2ed573';
-          ctx.fillText(`★ NEW BEST RECORD: ${this.highScore} ★`, centerX, panelY + 164);
+          ctx.fillText(`★ NEW BEST: ${this.highScore}  |  WALLET: ${Garage.getCoins()} 🪙 ★`, centerX, panelY + 176);
         } else {
           ctx.fillStyle = '#ffd32a';
-          ctx.fillText(`BEST RECORD: ${this.highScore}`, centerX, panelY + 164);
+          ctx.fillText(`BEST: ${this.highScore}   •   WALLET: ${Garage.getCoins()} 🪙`, centerX, panelY + 176);
         }
 
         // Restart prompt
         const promptPulse = Math.sin(this.totalTime * 5.0) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(255, 255, 255, ${promptPulse})`;
         ctx.font = '700 14px -apple-system, BlinkMacSystemFont, sans-serif';
-        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', centerX, panelY + 212);
+        ctx.fillText('PRESS [SPACE] OR TAP TO RESTART', centerX, panelY + 232);
 
         ctx.restore();
       }
@@ -2822,7 +3905,383 @@
   // ============================================================================
   // 9. BOOTSTRAP & DOM UI INITIALIZATION
   // ============================================================================
-  function initUI() {
+  // ============================================================================
+  // CAR SHOP CONTROLLER & UI MANAGER
+  // ============================================================================
+  function updateAllCoinDisplays() {
+    const coins = Garage.getCoins();
+    const titleDisp = document.getElementById('title-coin-display');
+    if (titleDisp) titleDisp.textContent = coins.toLocaleString();
+    const shopDisp = document.getElementById('shop-coins-val');
+    if (shopDisp) shopDisp.textContent = coins.toLocaleString();
+  }
+
+  const ShopController = {
+    currentIndex: 0,
+    confirmingCarId: null,
+    confirmTimer: null,
+    newCarId: null,
+    previewAnimId: null,
+    previewTime: 0,
+
+    init() {
+      // Find equipped car index
+      const equippedId = Garage.getEquippedCarId();
+      const idx = CARS.findIndex(c => c.id === equippedId);
+      this.currentIndex = idx !== -1 ? idx : 0;
+
+      // Build carousel dots
+      const dotsContainer = document.getElementById('shop-carousel-dots');
+      if (dotsContainer) {
+        dotsContainer.innerHTML = '';
+        CARS.forEach((car, i) => {
+          const dot = document.createElement('button');
+          dot.className = 'shop-dot' + (i === this.currentIndex ? ' active' : '');
+          dot.type = 'button';
+          dot.title = car.name;
+          dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.goTo(i, i > this.currentIndex ? 'next' : 'prev');
+          });
+          dotsContainer.appendChild(dot);
+        });
+      }
+
+      updateAllCoinDisplays();
+    },
+
+    open() {
+      const modal = document.getElementById('shop-modal');
+      if (!modal) return;
+
+      const equippedId = Garage.getEquippedCarId();
+      const idx = CARS.findIndex(c => c.id === equippedId);
+      this.currentIndex = idx !== -1 ? idx : 0;
+      this.confirmingCarId = null;
+
+      modal.classList.add('active');
+      this.renderCard();
+      this.startPreviewLoop();
+      updateAllCoinDisplays();
+    },
+
+    close() {
+      const modal = document.getElementById('shop-modal');
+      if (modal) modal.classList.remove('active');
+      this.stopPreviewLoop();
+      this.confirmingCarId = null;
+      if (this.confirmTimer) {
+        clearTimeout(this.confirmTimer);
+        this.confirmTimer = null;
+      }
+      updateAllCoinDisplays();
+    },
+
+    goTo(index, dir = 'next') {
+      const card = document.getElementById('shop-car-card');
+      if (card) {
+        card.classList.remove('slide-next', 'slide-prev');
+        // Force reflow for CSS animation restart
+        void card.offsetWidth;
+        card.classList.add(dir === 'next' ? 'slide-next' : 'slide-prev');
+        setTimeout(() => {
+          if (card) card.classList.remove('slide-next', 'slide-prev');
+        }, 240);
+      }
+
+      this.currentIndex = ((index % CARS.length) + CARS.length) % CARS.length;
+      this.confirmingCarId = null;
+      if (this.confirmTimer) {
+        clearTimeout(this.confirmTimer);
+        this.confirmTimer = null;
+      }
+      this.renderCard();
+    },
+
+    prev() {
+      this.goTo(this.currentIndex - 1, 'prev');
+    },
+
+    next() {
+      this.goTo(this.currentIndex + 1, 'next');
+    },
+
+    renderCard() {
+      const car = CARS[this.currentIndex];
+      const isOwned = Garage.isCarOwned(car.id);
+      const isEquipped = Garage.getEquippedCarId() === car.id;
+      const coins = Garage.getCoins();
+      const canAfford = coins >= car.price;
+
+      // Meta info
+      const nameEl = document.getElementById('shop-car-name');
+      if (nameEl) nameEl.textContent = car.name.toUpperCase();
+      const subEl = document.getElementById('shop-car-subtitle');
+      if (subEl) subEl.textContent = car.subtitle;
+
+      // Price tag
+      const priceTag = document.getElementById('shop-car-price-tag');
+      if (priceTag) {
+        if (car.price === 0) {
+          priceTag.textContent = 'FREE (DEFAULT)';
+        } else if (isOwned) {
+          priceTag.textContent = 'PURCHASED & READY';
+        } else {
+          priceTag.textContent = `${car.price} COINS`;
+        }
+      }
+
+      // Status pill
+      const statusPill = document.getElementById('shop-car-status-pill');
+      if (statusPill) {
+        statusPill.className = 'status-pill';
+        if (isEquipped) {
+          statusPill.classList.add('equipped');
+          statusPill.textContent = 'EQUIPPED';
+        } else if (isOwned) {
+          statusPill.classList.add('owned');
+          statusPill.textContent = 'OWNED';
+        } else {
+          statusPill.classList.add('locked');
+          statusPill.textContent = 'LOCKED';
+        }
+      }
+
+      // Lock overlay
+      const lockOverlay = document.getElementById('shop-lock-overlay');
+      const lockPrice = document.getElementById('shop-lock-price');
+      if (lockOverlay) {
+        if (!isOwned) {
+          lockOverlay.style.display = 'flex';
+          if (lockPrice) lockPrice.textContent = `${car.price} 🪙`;
+        } else {
+          lockOverlay.style.display = 'none';
+        }
+      }
+
+      // NEW badge
+      const newBadge = document.getElementById('shop-new-badge');
+      if (newBadge) {
+        newBadge.style.display = this.newCarId === car.id ? 'inline-flex' : 'none';
+      }
+
+      // Action button
+      const actBtn = document.getElementById('shop-action-btn');
+      if (actBtn) {
+        actBtn.className = 'btn-shop-action';
+        if (isEquipped) {
+          actBtn.classList.add('btn-shop-equipped');
+          actBtn.textContent = 'EQUIPPED';
+          actBtn.disabled = true;
+        } else if (isOwned) {
+          actBtn.classList.add('btn-shop-equip');
+          actBtn.textContent = 'EQUIP VEHICLE';
+          actBtn.disabled = false;
+        } else {
+          // Locked car
+          if (this.confirmingCarId === car.id) {
+            actBtn.classList.add('btn-shop-confirm');
+            actBtn.textContent = `CONFIRM PURCHASE (${car.price} 🪙)`;
+            actBtn.disabled = false;
+          } else if (canAfford) {
+            actBtn.classList.add('btn-shop-buy');
+            actBtn.textContent = `BUY VEHICLE (${car.price} 🪙)`;
+            actBtn.disabled = false;
+          } else {
+            actBtn.classList.add('btn-shop-disabled');
+            actBtn.textContent = `NEED ${car.price} 🪙 (${car.price - coins} MORE)`;
+            actBtn.disabled = true;
+          }
+        }
+      }
+
+      // Update dots
+      const dots = document.querySelectorAll('.shop-dot');
+      dots.forEach((dot, i) => {
+        if (i === this.currentIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      updateAllCoinDisplays();
+    },
+
+    handleAction() {
+      const car = CARS[this.currentIndex];
+      const isOwned = Garage.isCarOwned(car.id);
+      const isEquipped = Garage.getEquippedCarId() === car.id;
+
+      if (isEquipped) return;
+
+      if (isOwned) {
+        // Equip owned vehicle
+        Garage.setEquippedCarId(car.id);
+        if (window.game && window.game.roadster) {
+          window.game.roadster.carDef = car;
+        }
+        this.renderCard();
+        return;
+      }
+
+      // Locked car: buy flow
+      const coins = Garage.getCoins();
+      if (coins < car.price) return;
+
+      if (this.confirmingCarId !== car.id) {
+        // Step 1: Confirmation prompt
+        this.confirmingCarId = car.id;
+        this.renderCard();
+
+        if (this.confirmTimer) clearTimeout(this.confirmTimer);
+        this.confirmTimer = setTimeout(() => {
+          if (this.confirmingCarId === car.id) {
+            this.confirmingCarId = null;
+            this.renderCard();
+          }
+        }, 4000);
+      } else {
+        // Step 2: Confirmed purchase!
+        if (this.confirmTimer) clearTimeout(this.confirmTimer);
+        this.confirmTimer = null;
+
+        if (Garage.spendCoins(car.price)) {
+          Garage.unlockCar(car.id);
+          Garage.setEquippedCarId(car.id);
+          this.confirmingCarId = null;
+          this.newCarId = car.id;
+
+          // Play synthesized celebratory purchase sound
+          if (window.game && window.game.audio) {
+            window.game.audio.playPurchaseSound();
+          }
+
+          // Equip immediately in active game
+          if (window.game && window.game.roadster) {
+            window.game.roadster.carDef = car;
+          }
+
+          updateAllCoinDisplays();
+          this.renderCard();
+        }
+      }
+    },
+
+    startPreviewLoop() {
+      if (this.previewAnimId) cancelAnimationFrame(this.previewAnimId);
+      let lastTimestamp = performance.now();
+
+      const loop = (timestamp) => {
+        const modal = document.getElementById('shop-modal');
+        if (!modal || !modal.classList.contains('active')) {
+          this.previewAnimId = null;
+          return;
+        }
+
+        const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+        lastTimestamp = timestamp;
+        this.previewTime += dt;
+
+        this.renderPreview(dt);
+        this.previewAnimId = requestAnimationFrame(loop);
+      };
+
+      this.previewAnimId = requestAnimationFrame(loop);
+    },
+
+    stopPreviewLoop() {
+      if (this.previewAnimId) {
+        cancelAnimationFrame(this.previewAnimId);
+        this.previewAnimId = null;
+      }
+    },
+
+    renderPreview(dt) {
+      const canvas = document.getElementById('shop-preview-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Cyber stage background
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, '#0c101a');
+      bgGrad.addColorStop(0.7, '#141a29');
+      bgGrad.addColorStop(1, '#080a10');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Perspective floor grid
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 210, 211, 0.14)';
+      ctx.lineWidth = 1;
+      const horizonY = 96;
+
+      // Horizon line
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY);
+      ctx.lineTo(W, horizonY);
+      ctx.stroke();
+
+      // Floor grid lines
+      for (let y = horizonY + 8; y < H; y += 12) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      for (let x = -80; x < W + 80; x += 38) {
+        ctx.beginPath();
+        ctx.moveTo(x, H);
+        ctx.lineTo(W / 2 + (x - W / 2) * 0.35, horizonY);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Subtle underglow spotlight on floor
+      const glowGrad = ctx.createRadialGradient(W / 2, horizonY + 12, 10, W / 2, horizonY + 12, 110);
+      glowGrad.addColorStop(0, 'rgba(0, 210, 211, 0.28)');
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(0, horizonY - 10, W, H - horizonY + 10);
+
+      // Car drawing with gentle bobbing motion
+      const car = CARS[this.currentIndex];
+      const bobY = 66 + Math.sin(this.previewTime * 2.8) * 4.5;
+      const bobTilt = Math.sin(this.previewTime * 2.8) * 0.025;
+      const wheelRot = this.previewTime * 3.5;
+
+      // Gentle thruster hover puff in preview
+      if (Math.sin(this.previewTime * 2.8) > 0.85) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        const puffX = W / 2 + car.underNozzle.x;
+        const puffY = bobY + car.underNozzle.y + 6;
+        ctx.beginPath();
+        ctx.arc(puffX, puffY, 3 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.translate(W / 2, bobY);
+      ctx.rotate(bobTilt);
+
+      // Scale up slightly for preview fidelity (1.4x scale)
+      ctx.scale(1.4, 1.4);
+
+      drawCar(ctx, car, wheelRot);
+
+      ctx.restore();
+    }
+  };
+
+    function initUI() {
     const nameModal = document.getElementById('name-modal');
     const nameInput = document.getElementById('player-name-input');
     const nameError = document.getElementById('name-error');
@@ -2930,6 +4389,79 @@
         }
       });
     }
+
+    // Shop UI elements
+    const shopModal = document.getElementById('shop-modal');
+    const openShopBtn = document.getElementById('open-shop-btn');
+    const closeShopBtn = document.getElementById('close-shop-btn');
+    const prevShopBtn = document.getElementById('shop-prev-btn');
+    const nextShopBtn = document.getElementById('shop-next-btn');
+    const shopActionBtn = document.getElementById('shop-action-btn');
+
+    ShopController.init();
+
+    if (openShopBtn) {
+      openShopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ShopController.open();
+      });
+    }
+
+    if (closeShopBtn) {
+      closeShopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ShopController.close();
+      });
+    }
+
+    if (prevShopBtn) {
+      prevShopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ShopController.prev();
+      });
+    }
+
+    if (nextShopBtn) {
+      nextShopBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ShopController.next();
+      });
+    }
+
+    if (shopActionBtn) {
+      shopActionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ShopController.handleAction();
+      });
+    }
+
+    if (shopModal) {
+      shopModal.addEventListener('click', (e) => {
+        if (e.target === shopModal) {
+          ShopController.close();
+        }
+      });
+    }
+
+    // Keyboard controls for Shop Modal
+    window.addEventListener('keydown', (e) => {
+      if (!shopModal || !shopModal.classList.contains('active')) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        ShopController.prev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        ShopController.next();
+      } else if (e.code === 'Space' || e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        ShopController.handleAction();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        ShopController.close();
+      }
+    }, true);
   }
 
   window.addEventListener('DOMContentLoaded', () => {
