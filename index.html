@@ -1377,8 +1377,8 @@
     GROUND_HEIGHT: 50,        // Height of the Starbase tarmac & desert ground
     CEILING_HEIGHT: 12,       // Top boundary ceiling buffer
 
-    // Pillar spacing adjustments at high scores (score >= 80)
-    PILLAR_SPACING_SCORE_THRESHOLD: 80, // Score threshold to activate more spaced out pillars
+    // Pillar spacing adjustments at high scores (score >= 60)
+    PILLAR_SPACING_SCORE_THRESHOLD: 60, // Score threshold to activate more spaced out pillars
     PILLAR_SPACING_MULTIPLIER: 1.20,     // +20% horizontal distance between consecutive pillar pairs
     PILLAR_GAP_MULTIPLIER: 1.20,         // +20% vertical clearance gap between upper & lower pillars
 
@@ -3017,7 +3017,7 @@
 
       this.strobeTimer += dt * 3.5;
 
-      // When score first reaches the threshold (80), expand the in-flight spawn timer immediately
+      // When score first reaches the threshold (60), expand the in-flight spawn timer immediately
       const isSpacingBoosted = currentScore >= CONSTANTS.PILLAR_SPACING_SCORE_THRESHOLD;
       if (isSpacingBoosted && !this.spacingBoostApplied) {
         this.spacingBoostApplied = true;
