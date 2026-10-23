@@ -1377,6 +1377,11 @@
     GROUND_HEIGHT: 50,        // Height of the Starbase tarmac & desert ground
     CEILING_HEIGHT: 12,       // Top boundary ceiling buffer
 
+    // Pillar spacing adjustments at high scores (score >= 80)
+    PILLAR_SPACING_SCORE_THRESHOLD: 80, // Score threshold to activate more spaced out pillars
+    PILLAR_SPACING_MULTIPLIER: 1.20,     // +20% horizontal distance between consecutive pillar pairs
+    PILLAR_GAP_MULTIPLIER: 1.20,         // +20% vertical clearance gap between upper & lower pillars
+
     // Car sprite & hitbox configuration
     CAR_WIDTH: 68,            // Visual width of Tesla Roadster
     CAR_HEIGHT: 21,           // Visual height of Tesla Roadster
@@ -2998,22 +3003,35 @@
       this.towers = [];
       this.spawnTimer = 0;
       this.strobeTimer = 0;
+      this.spacingBoostApplied = false;
     }
 
     reset() {
       this.towers = [];
       this.spawnTimer = 0.5; // Spawn first tower quickly after game start
+      this.spacingBoostApplied = false;
     }
 
-    update(dt, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED, scoreCallback) {
+    update(dt, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED, scoreCallback, currentScore = 0) {
       if (!isPlaying) return;
 
       this.strobeTimer += dt * 3.5;
+
+      // When score first reaches the threshold (80), expand the in-flight spawn timer immediately
+      const isSpacingBoosted = currentScore >= CONSTANTS.PILLAR_SPACING_SCORE_THRESHOLD;
+      if (isSpacingBoosted && !this.spacingBoostApplied) {
+        this.spacingBoostApplied = true;
+        this.spawnTimer *= CONSTANTS.PILLAR_SPACING_MULTIPLIER;
+      }
+
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
-        this.spawnTowerPair();
+        this.spawnTowerPair(currentScore);
         // Dynamically adjust spawn timer so spatial distance between towers remains steady as speed increases
-        const spawnInterval = (CONSTANTS.PIPE_SPAWN_INTERVAL * CONSTANTS.BASE_SCROLL_SPEED) / currentSpeed;
+        // After score reaches 80, distance between pillars is 20% more spaced out
+        const spacingMult = isSpacingBoosted ? CONSTANTS.PILLAR_SPACING_MULTIPLIER : 1.0;
+        const targetDistance = (CONSTANTS.PIPE_SPAWN_INTERVAL * CONSTANTS.BASE_SCROLL_SPEED) * spacingMult;
+        const spawnInterval = targetDistance / currentSpeed;
         this.spawnTimer = spawnInterval;
       }
 
@@ -3034,15 +3052,23 @@
       }
     }
 
-    spawnTowerPair() {
+    spawnTowerPair(currentScore = 0) {
+      const isSpacingBoosted = currentScore >= CONSTANTS.PILLAR_SPACING_SCORE_THRESHOLD;
+      const gapMultiplier = isSpacingBoosted ? CONSTANTS.PILLAR_GAP_MULTIPLIER : 1.0;
+      const gapHeight = CONSTANTS.PIPE_GAP * gapMultiplier;
+
+      // Adjust min and max gap Y bounds to ensure upper and lower pillars remain visible and safe
+      const halfGap = gapHeight / 2;
+      const minGapY = Math.max(CONSTANTS.CEILING_HEIGHT + halfGap + 12, CONSTANTS.PIPE_MIN_GAP_Y);
+      const maxGapY = Math.min((CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT) - halfGap - 12, CONSTANTS.PIPE_MAX_GAP_Y);
+
       // Random gap center between safe bounds
-      const gapY = CONSTANTS.PIPE_MIN_GAP_Y +
-        Math.random() * (CONSTANTS.PIPE_MAX_GAP_Y - CONSTANTS.PIPE_MIN_GAP_Y);
+      const gapY = minGapY + Math.random() * (maxGapY - minGapY);
 
       this.towers.push({
         x: CONSTANTS.VIRTUAL_WIDTH + 20,
         gapY: gapY,
-        gapHeight: CONSTANTS.PIPE_GAP,
+        gapHeight: gapHeight,
         width: CONSTANTS.PIPE_WIDTH,
         passed: false
       });
@@ -3593,12 +3619,16 @@
             const nextLvl = this.getSpeedLevel();
             const nextSpeed = this.getScrollSpeed();
             this.speedBannerTimer = 1.8;
-            this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} KM/H)`;
+            if (this.score === CONSTANTS.PILLAR_SPACING_SCORE_THRESHOLD) {
+              this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} KM/H) • TOWERS +20% SPACED!`;
+            } else {
+              this.speedBannerText = `⚡ SPEED UP! LVL ${nextLvl} (${nextSpeed} KM/H)`;
+            }
             this.audio.playSpeedUpPing();
           } else {
             this.audio.playScorePing();
           }
-        });
+        }, this.score);
         this.particles.update(dt, currentSpeed);
 
         // Collision check
@@ -3792,7 +3822,11 @@
         const curLvl = this.getSpeedLevel();
         ctx.fillStyle = '#00d2d3';
         ctx.font = '700 11px monospace';
-        ctx.fillText(`SPEED: ${curSpeed} KM/H  [LVL ${curLvl}]`, 20, 52);
+        if (this.score >= CONSTANTS.PILLAR_SPACING_SCORE_THRESHOLD) {
+          ctx.fillText(`SPEED: ${curSpeed} KM/H [LVL ${curLvl}] • TOWERS +20% SPACED`, 20, 52);
+        } else {
+          ctx.fillText(`SPEED: ${curSpeed} KM/H  [LVL ${curLvl}]`, 20, 52);
+        }
 
         // Floating Speed Increase alert notification
         if (this.speedBannerTimer > 0) {
@@ -3802,21 +3836,23 @@
           const alpha = Math.min(1.0, progress * 2.5);
           const floatY = 125 - (1.0 - progress) * 18;
 
+          ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          const textW = ctx.measureText(this.speedBannerText).width;
+          const bWidth = Math.max(330, textW + 44);
+          const bHeight = 40;
+
           ctx.shadowColor = '#00f0ff';
           ctx.shadowBlur = 18;
           ctx.fillStyle = `rgba(12, 16, 26, ${alpha * 0.90})`;
           ctx.strokeStyle = `rgba(0, 240, 255, ${alpha * 0.95})`;
           ctx.lineWidth = 1.6;
 
-          const bWidth = 330;
-          const bHeight = 40;
           ctx.beginPath();
           ctx.roundRect(W / 2 - bWidth / 2, floatY - 26, bWidth, bHeight, 8);
           ctx.fill();
           ctx.stroke();
 
           ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-          ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
           ctx.fillText(this.speedBannerText, W / 2, floatY);
           ctx.restore();
         }
