@@ -26,10 +26,21 @@ export class Roadster {
     this.thrustOutput = 0;
     this.alive = true;
     this.idleTimer = 0;
+    this.xOffset = 0; // Horizontal knockback displacement (shield hit), springs back to 0
+    this.xVel = 0;
     this.carDef = getCarDef(Garage.getEquippedCarId());
   }
 
-  update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED) {
+  // Small nudge after a shield absorbs a pillar hit: dirY = +1 pushes down, -1 pushes up
+  // (toward the gap centre) and the car is shoved backward so it stops overlapping the pillar.
+  knockback(dirY) {
+    this.vy = dirY * CONSTANTS.SHIELD_KNOCKBACK_VY;
+    this.xVel = -CONSTANTS.SHIELD_KNOCKBACK_VX;
+  }
+
+  // timeScale (1 = normal) only thins out particle emission during slow-mo so plume density
+  // per world-distance stays the same; it does not touch the physics integration.
+  update(dt, isThrusting, thrustJustPressed, particleSystem, isPlaying, currentSpeed = CONSTANTS.BASE_SCROLL_SPEED, timeScale = 1) {
     if (!this.alive) return;
 
     if (!isPlaying) {
@@ -67,6 +78,18 @@ export class Roadster {
     // Position update
     this.y += this.vy * dt;
 
+    // Critically-damped spring returning the car to its flight lane after a knockback
+    if (this.xOffset !== 0 || this.xVel !== 0) {
+      const k = CONSTANTS.SHIELD_KNOCKBACK_SPRING;
+      this.xVel += (-k * this.xOffset - 2 * Math.sqrt(k) * this.xVel) * dt;
+      this.xOffset += this.xVel * dt;
+      if (Math.abs(this.xOffset) < 0.01 && Math.abs(this.xVel) < 0.5) {
+        this.xOffset = 0;
+        this.xVel = 0;
+      }
+      this.x = this.playX + this.xOffset;
+    }
+
     // Wheel spin while airborne
     this.wheelRotation += dt * (currentSpeed / 15);
 
@@ -100,23 +123,24 @@ export class Roadster {
     }
 
     // Emit continuous cold-gas plume
+    const emit = () => timeScale >= 1 || Math.random() < timeScale;
     if (this.thrustOutput > 0.05) {
-      particleSystem.emitColdGasPlume(underX, underY, underAngle, -currentSpeed * 0.4, this.vy * 0.3, this.thrustOutput);
-      particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -currentSpeed * 0.5, this.vy * 0.2, this.thrustOutput);
+      if (emit()) particleSystem.emitColdGasPlume(underX, underY, underAngle, -currentSpeed * 0.4, this.vy * 0.3, this.thrustOutput);
+      if (emit()) particleSystem.emitColdGasPlume(rearX, rearY, rearAngle, -currentSpeed * 0.5, this.vy * 0.2, this.thrustOutput);
     }
 
     // Aerodynamic vapor trail streaming off rear spoiler
     const sp = this.carDef.spoilerOffset;
     const spoilerX = this.x + (sp.x * cosA - sp.y * sinA);
     const spoilerY = this.y + (sp.x * sinA + sp.y * cosA);
-    if (Math.random() < 0.65) {
+    if (Math.random() < 0.65 && emit()) {
       particleSystem.emitVaporTrail(spoilerX, spoilerY, currentSpeed);
     }
 
     // Ground dust / vapor ripple effect
     const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
     const altitude = groundY - (this.y + 10);
-    if (altitude < 85 && this.thrustOutput > 0.15) {
+    if (altitude < 85 && this.thrustOutput > 0.15 && emit()) {
       const dustIntensity = (1.0 - (altitude / 85)) * this.thrustOutput;
       particleSystem.emitGroundDust(this.x, groundY, dustIntensity, currentSpeed);
     }
@@ -135,10 +159,11 @@ export class Roadster {
     };
   }
 
-  render(ctx) {
+  render(ctx, alpha = 1) {
     if (!this.alive) return;
 
     ctx.save();
+    if (alpha < 1) ctx.globalAlpha = alpha; // blink while shield-invincible
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 

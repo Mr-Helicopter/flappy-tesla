@@ -166,6 +166,49 @@ export class ParticleSystem {
   }
 
   // --------------------------------------------------------------------------
+  // EMITTER: Power-up pickup sparkle / shield pop (tinted radial gas burst + ring)
+  // --------------------------------------------------------------------------
+  emitPowerUpBurst(x, y, hue, count = 16, speedMul = 1.0) {
+    this.shockwaves.push({
+      x: x,
+      y: y,
+      radius: 6,
+      currentRadius: 6,
+      maxRadius: 44 * speedMul,
+      life: 0,
+      maxLife: 0.22,
+      alpha: 0.85,
+      currentAlpha: 0.85
+    });
+
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (Math.random() * 200 + 90) * speedMul;
+      const size = Math.random() * 3 + 2.5;
+      const alpha = 0.9;
+      this.particles.push({
+        type: 'gas',
+        x: x,
+        y: y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        size: size,
+        currentSize: size,
+        maxSize: Math.random() * 10 + 9,
+        life: 0,
+        maxLife: Math.random() * 0.25 + 0.3,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 8,
+        colorH: hue + (Math.random() - 0.5) * 24,
+        colorS: 85,
+        colorL: 78,
+        alphaStart: alpha,
+        currentAlpha: alpha
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
   // EMITTER: Game over crash explosion (fragments, carbon panels, vapor)
   // --------------------------------------------------------------------------
   emitCrashExplosion(x, y) {

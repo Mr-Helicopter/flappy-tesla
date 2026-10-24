@@ -3,6 +3,8 @@
 // Cold-gas thruster hiss, initial valve pop, score ping, crash impact.
 // ============================================================================
 
+import { CONSTANTS } from './config.js';
+
 export class SoundManager {
   constructor() {
     this.ctx = null;
@@ -10,6 +12,7 @@ export class SoundManager {
     this.isMuted = false;
     this.isInitialized = false;
     this.isThrusterSounding = false;
+    this.slowBlend = 0; // 0..1 slow-mo strength currently applied to the hiss
 
     // Thruster continuous hiss nodes
     this.noiseBuffer = null;
@@ -99,7 +102,8 @@ export class SoundManager {
         this.playValvePuff();
 
         // Organic acoustic variation: slightly randomize filter center frequency
-        const freq = 1750 + (Math.random() - 0.5) * 350;
+        // (scaled down while slow-mo is active so the hiss keeps sounding slowed)
+        const freq = (1750 + (Math.random() - 0.5) * 350) * (1 - CONSTANTS.SLOWMO_AUDIO_FILTER_DROP * this.slowBlend);
         this.thrusterFilter.frequency.cancelScheduledValues(now);
         this.thrusterFilter.frequency.setValueAtTime(freq, now);
 
@@ -116,6 +120,104 @@ export class SoundManager {
         this.thrusterGain.gain.setTargetAtTime(0.0001, now, 0.040);
       }
     }
+  }
+
+  // Slow-motion feel for the thruster hiss: lower the filter frequencies and playback rate
+  // proportionally to the eased slow-mo blend (0..1). Called every frame; smooth by design.
+  setSlowMo(blend) {
+    if (Math.abs(blend - this.slowBlend) < 0.002) return;
+    this.slowBlend = blend;
+    if (!this.ctx || !this.thrusterSource || !this.thrusterFilter || !this.thrusterHighpass) return;
+
+    const now = this.ctx.currentTime;
+    const filterMul = 1 - CONSTANTS.SLOWMO_AUDIO_FILTER_DROP * blend;
+    this.thrusterSource.playbackRate.setTargetAtTime(1 - CONSTANTS.SLOWMO_AUDIO_RATE_DROP * blend, now, 0.06);
+    this.thrusterFilter.frequency.setTargetAtTime(1750 * filterMul, now, 0.06);
+    this.thrusterHighpass.frequency.setTargetAtTime(650 * (1 - 0.3 * blend), now, 0.06);
+  }
+
+  // Power-up pickup chime, distinct pitch per type:
+  //  shield = bright rising arpeggio (E5 -> B5 -> E6), slowmo = low descending sweep (A5 -> E4) + sub pulse
+  playPowerUpPickup(type) {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+
+    if (type === 'shield') {
+      [659.25, 987.77, 1318.51].forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.06;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.22, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.21);
+      });
+    } else {
+      const sweep = this.ctx.createOscillator();
+      const sweepGain = this.ctx.createGain();
+      sweep.type = 'triangle';
+      sweep.frequency.setValueAtTime(880, now);
+      sweep.frequency.exponentialRampToValueAtTime(329.63, now + 0.38);
+      sweepGain.gain.setValueAtTime(0.24, now);
+      sweepGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      sweep.connect(sweepGain);
+      sweepGain.connect(this.masterGain);
+      sweep.start(now);
+      sweep.stop(now + 0.44);
+
+      const sub = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(220, now);
+      sub.frequency.exponentialRampToValueAtTime(110, now + 0.4);
+      subGain.gain.setValueAtTime(0.2, now);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.44);
+      sub.connect(subGain);
+      subGain.connect(this.masterGain);
+      sub.start(now);
+      sub.stop(now + 0.46);
+    }
+  }
+
+  // Short glassy shatter when the shield pops: filtered noise crackle + falling sine ping
+  playShieldBreak() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+
+    if (this.noiseBuffer) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noiseBuffer;
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.setValueAtTime(3200, now);
+      hp.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.42, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      src.connect(hp);
+      hp.connect(g);
+      g.connect(this.masterGain);
+      src.start(now);
+      src.stop(now + 0.24);
+    }
+
+    const ping = this.ctx.createOscillator();
+    const pingGain = this.ctx.createGain();
+    ping.type = 'triangle';
+    ping.frequency.setValueAtTime(1760, now);
+    ping.frequency.exponentialRampToValueAtTime(330, now + 0.18);
+    pingGain.gain.setValueAtTime(0.28, now);
+    pingGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    ping.connect(pingGain);
+    pingGain.connect(this.masterGain);
+    ping.start(now);
+    ping.stop(now + 0.22);
   }
 
   // High-pressure cold gas valve "pssht" transient

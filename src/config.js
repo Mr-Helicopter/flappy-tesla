@@ -130,4 +130,37 @@ export const CONSTANTS = {
   // Thruster timing
   THRUST_RAMP_UP: 0.035,    // Seconds for thrusters to reach full output
   THRUST_RAMP_DOWN: 0.150,  // Seconds for thruster plumes to taper off after release
+
+  // ------------------------------------------------------------------------
+  // POWER-UPS (Shield & Slow Motion) - identical for every car in the shop
+  // ------------------------------------------------------------------------
+  // Spawn rules (evaluated once per new pillar gap)
+  POWERUP_SPAWN_CHANCE: 0.20,     // Roll per eligible gap. Because a gap right after a power-up is
+                                  // never eligible, 0.20 works out to ~1 power-up per 6 gaps overall.
+  POWERUP_MIN_SCORE: 3,           // No power-ups spawn while score < this value
+  POWERUP_SHIELD_CHANCE: 0.5,     // Shield vs Slow-Mo split (0.5 = 50/50)
+  POWERUP_ORB_RADIUS: 14,         // Visual radius of the collectible orb
+  POWERUP_PICKUP_RADIUS: 24,      // Generous pickup distance from orb centre to the car hitbox
+  POWERUP_BOB_AMPLITUDE: 4,       // Gentle vertical bobbing (px)
+  POWERUP_BOB_SPEED: 2.4,         // Bobbing speed (rad/s)
+  POWERUP_GAP_PADDING: 8,         // Extra clearance between the orb and the pillar tips
+  POWERUP_POPUP_TIME: 1.0,        // Seconds the floating "SHIELD!" / "SLOW-MO!" popup lasts
+
+  // Shield: absorbs ONE pillar hit (never ground / ceiling), no timer
+  SHIELD_INVINCIBILITY: 1.0,      // Seconds of pillar invincibility after absorbing a hit (car blinks)
+  SHIELD_BREAK_TIME: 0.25,        // Seconds the bubble flickers / dissolves after absorbing a hit
+  SHIELD_KNOCKBACK_VY: 180,       // Vertical nudge (px/s) toward the gap centre
+  SHIELD_KNOCKBACK_VX: 520,       // Horizontal nudge (px/s) pushing the car back; springs home
+  SHIELD_KNOCKBACK_SPRING: 60,    // Spring stiffness pulling the car back to its flight lane
+
+  // Slow Motion: global timeScale applied to every gameplay delta-time
+  SLOWMO_DURATION: 5,             // Seconds (real time) the effect lasts
+  SLOWMO_TIME_SCALE: 0.5,         // World speed multiplier at full effect
+  SLOWMO_EASE_IN: 0.25,           // Seconds to ease into slow-mo
+  SLOWMO_EASE_OUT: 0.5,           // Seconds to ease back out (during the last part of the timer)
+  SLOWMO_WARNING_TIME: 1.0,       // HUD icon flashes during the final N seconds
+  SLOWMO_AUDIO_RATE_DROP: 0.25,   // Thruster hiss playback rate drops by this fraction at full effect
+  SLOWMO_AUDIO_FILTER_DROP: 0.35, // Thruster hiss filter frequency drops by this fraction at full effect
+  SLOWMO_GHOST_INTERVAL: 0.035,   // Seconds between ghost-trail samples while active
+  SLOWMO_GHOST_LIFE: 0.4,         // Seconds each ghost image lingers
 };

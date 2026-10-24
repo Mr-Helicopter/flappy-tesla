@@ -12,6 +12,7 @@ export class ObstacleManager {
     this.spawnTimer = 0;
     this.strobeTimer = 0;
     this.spacingBoostApplied = false;
+    this.onSpawn = null; // Optional hook: (tower, currentScore) => void, fired for every new pillar pair
   }
 
   reset() {
@@ -73,23 +74,27 @@ export class ObstacleManager {
     // Random gap center between safe bounds
     const gapY = minGapY + Math.random() * (maxGapY - minGapY);
 
-    this.towers.push({
+    const tower = {
       x: CONSTANTS.VIRTUAL_WIDTH + 20,
       gapY: gapY,
       gapHeight: gapHeight,
       width: CONSTANTS.PIPE_WIDTH,
       passed: false
-    });
+    };
+    this.towers.push(tower);
+    if (this.onSpawn) this.onSpawn(tower, currentScore);
   }
 
-  // Check collision between car hitbox and towers
-  checkCollision(carHitbox) {
+  // Ceiling and ground boundaries (a Shield never protects against these)
+  hitsBounds(carHitbox) {
     const groundY = CONSTANTS.VIRTUAL_HEIGHT - CONSTANTS.GROUND_HEIGHT;
-
-    // Ceiling and ground boundaries
     if (carHitbox.top <= CONSTANTS.CEILING_HEIGHT) return true;
     if (carHitbox.bottom >= groundY) return true;
+    return false;
+  }
 
+  // Returns { tower, side: 'top' | 'bottom' } for the first pillar the hitbox overlaps, else null
+  getPillarHit(carHitbox) {
     for (const t of this.towers) {
       const tLeft = t.x;
       const tRight = t.x + t.width;
@@ -99,12 +104,16 @@ export class ObstacleManager {
       // Check horizontal overlap with tower
       if (carHitbox.right > tLeft && carHitbox.left < tRight) {
         // Check if hitting upper tower or lower tower
-        if (carHitbox.top < gapTop || carHitbox.bottom > gapBottom) {
-          return true;
-        }
+        if (carHitbox.top < gapTop) return { tower: t, side: 'top' };
+        if (carHitbox.bottom > gapBottom) return { tower: t, side: 'bottom' };
       }
     }
-    return false;
+    return null;
+  }
+
+  // Check collision between car hitbox and towers
+  checkCollision(carHitbox) {
+    return this.hitsBounds(carHitbox) || this.getPillarHit(carHitbox) !== null;
   }
 
   render(ctx) {

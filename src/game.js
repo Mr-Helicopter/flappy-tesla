@@ -17,6 +17,8 @@ import { Garage } from './storage.js';
 import { submitScoreToSupabase } from './supabase.js';
 import { ShopController, updateAllCoinDisplays } from './shop.js';
 import { loadLeaderboardView, refreshLeaderboards } from './leaderboard.js';
+import { PowerUpManager } from './entities/powerups.js';
+import { drawOrbs, drawShieldBubble, drawSlowMoTrail, drawSlowMoTint, drawPowerUpOverlay } from './rendering/powerups-draw.js';
 
 export class Game {
   constructor() {
@@ -29,6 +31,8 @@ export class Game {
     this.roadster = new Roadster(220, 260);
     this.obstacles = new ObstacleManager();
     this.background = new Background();
+    this.powerups = new PowerUpManager();
+    this.obstacles.onSpawn = (tower, score) => this.powerups.onGapSpawned(tower, score);
     this.input = new InputHandler(() => this.state.phase);
 
     // Wire up shop controller callbacks (no window globals)
@@ -90,6 +94,7 @@ export class Game {
     this.roadster.reset();
     this.obstacles.reset();
     this.particles.reset();
+    this.powerups.reset();
 
     // UI state transitions
     const titleBar = document.getElementById('title-ui-bar');
@@ -101,6 +106,7 @@ export class Game {
   triggerGameOver() {
     this.state.triggerGameOver();
     this.roadster.alive = false;
+    this.powerups.reset(); // Shield / slow-mo / orbs never carry over a crash
 
     // Add coins earned in this flight (1 point = 1 coin)
     Garage.addCoins(this.state.earnedCoins);
@@ -142,6 +148,13 @@ export class Game {
 
     const currentSpeed = this.state.phase === 'PLAYING' ? this.state.getScrollSpeed() : CONSTANTS.BASE_SCROLL_SPEED;
 
+    // Global time scale: only advances (and only ever differs from 1) while PLAYING, so the
+    // title screen, game-over screen and shop modal freeze every power-up timer.
+    const timeScale = this.state.phase === 'PLAYING' ? this.powerups.tickTime(dt) : 1;
+    const gdt = dt * timeScale; // Game-time delta used by ALL gameplay systems
+    this.state.worldTime += gdt;
+    this.audio.setSlowMo(this.powerups.slowBlend);
+
     // Audio mute toggle via M key
     if (this.input.muteToggled) {
       this.audio.toggleMute();
@@ -168,9 +181,9 @@ export class Game {
       // Continuous thruster audio control
       this.audio.setThrusterActive(this.input.isThrusting, this.input.thrustJustPressed);
 
-      this.background.update(dt, true, currentSpeed);
-      this.roadster.update(dt, this.input.isThrusting, this.input.thrustJustPressed, this.particles, true, currentSpeed);
-      this.obstacles.update(dt, true, currentSpeed, () => {
+      this.background.update(gdt, true, currentSpeed);
+      this.roadster.update(gdt, this.input.isThrusting, this.input.thrustJustPressed, this.particles, true, currentSpeed, timeScale);
+      this.obstacles.update(gdt, true, currentSpeed, () => {
         this.state.score++;
         if (this.state.score > this.state.highScore) {
           this.state.highScore = this.state.score;
@@ -193,11 +206,23 @@ export class Game {
           this.audio.playScorePing();
         }
       }, this.state.score);
-      this.particles.update(dt, currentSpeed);
+      this.powerups.update(dt, gdt, currentSpeed, this.roadster, this.particles, this.audio);
+      this.particles.update(gdt, currentSpeed);
 
-      // Collision check
-      if (this.obstacles.checkCollision(this.roadster.getHitbox())) {
+      // Collision check: ground / ceiling are always lethal; pillars can be absorbed by the
+      // Shield or ignored during the post-shield invincibility window.
+      const hitbox = this.roadster.getHitbox();
+      if (this.obstacles.hitsBounds(hitbox)) {
         this.triggerGameOver();
+      } else {
+        const pillarHit = this.obstacles.getPillarHit(hitbox);
+        if (pillarHit && !this.powerups.isInvincible()) {
+          if (this.powerups.hasShield) {
+            this.powerups.absorbHit(pillarHit, this.roadster, this.particles, this.audio);
+          } else {
+            this.triggerGameOver();
+          }
+        }
       }
     } else if (this.state.phase === 'GAMEOVER') {
       this.state.gameOverTimer += dt;
@@ -241,7 +266,7 @@ export class Game {
     }
 
     // 1. Parallax background
-    this.background.render(ctx, this.state.totalTime);
+    this.background.render(ctx, this.state.worldTime);
 
     // Ceiling flight ceiling warning boundary
     ctx.save();
@@ -260,8 +285,16 @@ export class Game {
     // 3. Particles & Thruster plumes (rendered underneath the car sprite)
     this.particles.render(ctx);
 
-    // 4. Roadster sprite
-    this.roadster.render(ctx);
+    // 3b. Power-up orbs (floating in the pillar gaps)
+    drawOrbs(ctx, this.powerups.orbs, this.powerups.time);
+
+    // 4. Roadster sprite (slow-mo ghost trail behind it, blinking while shield-invincible)
+    drawSlowMoTrail(ctx, this.roadster, this.powerups);
+    this.roadster.render(ctx, this.powerups.getCarAlpha());
+    if (this.roadster.alive) drawShieldBubble(ctx, this.roadster, this.powerups);
+
+    // 4b. Slow-mo purple-blue tint + vignette
+    drawSlowMoTint(ctx, this.powerups);
 
     // 5. Dynamic screen vignette pulse during cold-gas thruster firing
     if (this.state.phase === 'PLAYING' && this.roadster.thrustOutput > 0.05) {
@@ -279,6 +312,7 @@ export class Game {
 
     // 6. HUD and UI overlays
     renderHUD(ctx, this.state, this.audio, this.roadster);
+    drawPowerUpOverlay(ctx, this.powerups, this.state.phase);
 
     ctx.restore();
   }

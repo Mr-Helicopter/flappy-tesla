@@ -17,6 +17,7 @@ export class GameState {
     this.speedBannerTimer = 0;
     this.speedBannerText = '';
     this.totalTime = 0;
+    this.worldTime = 0; // Game-time clock (advances by dt * timeScale) for world animations
   }
 
   getSpeedLevel() {
